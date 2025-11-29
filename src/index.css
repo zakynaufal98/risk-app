@@ -1,0 +1,375 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+/* Pastikan Bootstrap Icons diimport di main.jsx atau index.html */
+
+:root {
+  /* --- DIMENSIONS --- */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 85px;
+  
+  /* --- PALET WARNA MODERN --- */
+  --primary-bg: #f4f7fe;       
+  --card-bg: #ffffff;
+  
+  /* Warna Utama: Biru Elektrik */
+  --primary-color: #4318ff;    
+  --secondary-color: #707eae;
+  
+  /* Sidebar Putih Modern */
+  --sidebar-bg: #ffffff;       
+  --sidebar-text: #4a5568;     /* Abu Gelap (Agar tulisan terbaca jelas) */
+  --sidebar-text-active: #2b3674;
+
+  --text-dark: #2b3674;        /* Biru Navy Gelap (Judul) */
+  --text-gray: #a3aed0;        /* Abu soft */
+  
+  /* Status Colors */
+  --success-color: #05cd99;
+  --warning-color: #ffb547;
+  --danger-color: #ee5d50;
+  --info-color: #33a1fd;
+}
+
+/* --- GLOBAL RESET --- */
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--primary-bg);
+  margin: 0;
+  padding: 0;
+  color: var(--text-dark);
+  overflow-x: hidden;
+}
+
+a { text-decoration: none; }
+ul { list-style: none; padding: 0; margin: 0; }
+
+/* FIX UTAMA: Agar shadow/border focus tidak terpotong */
+.card {
+  overflow: visible !important; 
+}
+
+/* --- LAYOUT UTAMA --- */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* --- SIDEBAR MODERN (Putih Bersih) --- */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  box-shadow: 14px 17px 40px 4px rgba(112, 144, 176, 0.08); 
+  border-right: none;
+}
+
+.sidebar-header {
+  height: 80px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+
+/* Menu List Sidebar */
+.menu-list { padding: 0; margin-top: 10px; }
+.menu-list li { margin-bottom: 4px; }
+
+.menu-list li a {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  color: var(--sidebar-text);
+  font-size: 0.95rem;
+  font-weight: 600; /* Lebih tebal agar terbaca */
+  border-radius: 0; 
+  margin-left: 20px;
+  border-left: 4px solid transparent; 
+  transition: all 0.2s;
+}
+
+.menu-list li a:hover {
+  color: var(--primary-color);
+  background: #f8f9fa;
+}
+
+/* Menu Aktif */
+.menu-list li.active a {
+  color: var(--text-dark);
+  font-weight: 700;
+  border-left: 4px solid var(--primary-color);
+}
+
+.menu-list li.active a i {
+  color: var(--primary-color);
+}
+
+.menu-icon {
+  font-size: 1.3rem;
+  width: 30px;
+  margin-right: 12px;
+  display: flex; justify-content: center;
+}
+
+/* Tombol Toggle Sidebar */
+.sidebar-toggle-btn {
+  background: transparent !important;
+  border: none;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+}
+.sidebar-toggle-btn:hover {
+  background-color: rgba(67, 24, 255, 0.05) !important;
+  transform: scale(1.1);
+}
+
+/* Sidebar Collapsed Handling */
+.sidebar.collapsed .menu-text, .sidebar.collapsed .sidebar-title { display: none; }
+.sidebar.collapsed .sidebar-header { justify-content: center; padding: 0; }
+.sidebar.collapsed .menu-list li a { justify-content: center; padding: 14px 0; margin-left: 0; border-left: none; }
+.sidebar.collapsed .menu-icon { margin-right: 0; font-size: 1.4rem; }
+.sidebar.collapsed .sidebar-header .logo-icon { display: none; }
+
+/* --- MAIN CONTENT --- */
+.main-content {
+  flex-grow: 1;
+  margin-left: var(--sidebar-width);
+  padding: 30px;
+  transition: margin-left 0.3s ease;
+  width: 100%;
+}
+.main-content.expanded { margin-left: var(--sidebar-collapsed-width); }
+
+/* --- CARD MODERN (Dashboard Style) --- */
+.card-custom {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 24px;
+  border: none;
+  box-shadow: 0px 3px 20px rgba(112, 144, 176, 0.10); 
+  transition: all 0.3s ease;
+  height: 100%;
+  position: relative;
+  z-index: 1; /* Layer rendah agar tidak menutupi dropdown */
+}
+.card-custom:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 15px 35px rgba(112, 144, 176, 0.15);
+}
+
+/* --- NAVBAR TRANSPARAN --- */
+.navbar-custom {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0px 2px 10px rgba(112, 144, 176, 0.05);
+  height: auto;
+  position: relative;
+  z-index: 1000 !important; /* Layer atas */
+}
+
+/* --- DROPDOWN MENU FIX --- */
+.dropdown-menu {
+  background-color: #ffffff !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+  margin-top: 10px !important;
+  padding: 8px !important;
+  min-width: 200px;
+  z-index: 9999 !important; /* Paling atas */
+}
+
+.dropdown-header {
+  color: #a3aed0 !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  padding: 8px 12px !important;
+}
+
+.dropdown-item {
+  color: #2b3674 !important;
+  font-weight: 500 !important;
+  font-size: 0.9rem !important;
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  transition: all 0.2s ease;
+  display: flex !important; align-items: center !important; gap: 10px !important;
+}
+
+.dropdown-item:hover {
+  background-color: #f4f7fe !important;
+  color: #4318ff !important;
+}
+
+.dropdown-item.text-danger { color: #ee5d50 !important; }
+.dropdown-item.text-danger:hover { background-color: #fff5f5 !important; color: #d32f2f !important; }
+.dropdown-divider { margin: 4px 0 !important; border-top: 1px solid #f0f0f0 !important; }
+
+
+/* --- INPUT UMUM (Dashboard) --- */
+.form-control, .form-select {
+  border-radius: 12px !important;
+  border: 1px solid #e0e5f2;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  color: var(--text-dark);
+  background-color: #fff;
+  transition: all 0.2s;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.15);
+}
+
+.form-control::placeholder { color: #8f9bba; }
+
+/* --- BUTTONS --- */
+.btn-primary {
+  background: linear-gradient(90deg, #4318ff 0%, #2b3674 100%);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 24px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+.btn-primary:hover {
+  box-shadow: 0px 10px 20px rgba(67, 24, 255, 0.3);
+  transform: translateY(-2px);
+  background: linear-gradient(90deg, #3311db 0%, #1a237e 100%);
+}
+
+.btn-light {
+  background: #f4f7fe; color: var(--text-dark);
+  border: none; border-radius: 10px;
+}
+.btn-light:hover { background: #eef2ff; color: var(--primary-color); }
+
+/* --- BADGES --- */
+.badge {
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  font-weight: 600 !important;
+}
+.badge.bg-success { background-color: #05cd99 !important; color: white; }
+.badge.bg-warning { background-color: #ffb547 !important; color: #1b2559; }
+.badge.bg-danger  { background-color: #ee5d50 !important; color: white; }
+.badge.bg-primary { background-color: #4318ff !important; color: white; }
+.badge.bg-info    { background-color: #33a1fd !important; color: white; } 
+
+/* UTILS */
+.text-primary { color: #4318ff !important; }
+.text-dark { color: #2b3674 !important; }
+.text-muted { color: #a3aed0 !important; }
+
+/* ======================================================= */
+/* LOGIN PAGE STYLES (MODERN SPLIT SCREEN)                */
+/* ======================================================= */
+
+.modern-login-container {
+  display: flex; min-height: 100vh; width: 100%;
+  background-color: #ffffff; font-family: 'Poppins', sans-serif;
+  position: relative; z-index: 2000;
+}
+
+.login-form-side {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 2rem; background-color: #fff; position: relative;
+}
+
+.login-content-wrapper { width: 100%; max-width: 420px; }
+
+.brand-header { display: flex; align-items: center; gap: 10px; margin-bottom: 2rem; color: #1a237e; }
+.login-heading { font-size: 2rem; font-weight: 700; color: #1a237e; margin-bottom: 0.5rem; }
+.login-subheading { color: #6c757d; margin-bottom: 2.5rem; font-size: 0.95rem; }
+
+/* Input Khusus Login */
+.modern-input-group { position: relative; margin-bottom: 1.5rem; }
+.input-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #a0a5b9; font-size: 1.1rem; z-index: 10; }
+
+.form-control.modern-input {
+  padding: 14px 14px 14px 48px; border-radius: 12px;
+  border: 2px solid #f0f2f5; background-color: #f8f9fa;
+  font-size: 0.95rem; transition: all 0.3s ease; width: 100%;
+}
+.form-control.modern-input:focus { background-color: #fff; border-color: #4318ff; box-shadow: 0 0 0 4px rgba(67, 24, 255, 0.1); outline: none; }
+
+/* Tombol Login */
+.btn-modern {
+  width: 100%; padding: 14px; border-radius: 12px;
+  background: linear-gradient(135deg, #4318ff 0%, #2b3674 100%);
+  border: none; color: white; font-weight: 600; letter-spacing: 0.5px;
+  transition: transform 0.2s; margin-top: 1rem;
+}
+.btn-modern:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(67, 24, 255, 0.2); }
+.btn-modern:disabled { background: #a0a5b9; cursor: not-allowed; }
+
+.text-link { color: #4318ff; font-weight: 600; text-decoration: none; font-size: 0.9rem; cursor: pointer; }
+.text-link:hover { text-decoration: underline; }
+
+/* KANAN: Visual Area */
+.login-visual-side {
+  flex: 1.2; background: linear-gradient(135deg, #4318ff 0%, #111c44 100%);
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: 4rem; color: white; position: relative; overflow: hidden;
+}
+.visual-circle { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.05); }
+.c1 { width: 400px; height: 400px; top: -100px; right: -100px; }
+.c2 { width: 300px; height: 300px; bottom: -50px; left: -50px; }
+
+
+/* ======================================================= */
+/* RESPONSIVE MOBILE FIX (PREMIUM FEEL)                   */
+/* ======================================================= */
+@media (max-width: 992px) {
+  /* Hide Login Visual */
+  .login-visual-side { display: none; }
+
+  /* 1. Sidebar sembunyi dengan transisi halus */
+  .sidebar {
+    left: -280px !important; /* Sembunyi total */
+    width: 280px !important; /* Lebar fix di HP */
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1050; /* Di atas overlay */
+  }
+
+  /* 2. Saat Muncul */
+  .sidebar.mobile-open {
+    left: 0 !important;
+    box-shadow: 5px 0 25px rgba(0,0,0,0.15) !important;
+  }
+
+  /* 3. Main Content Full Width */
+  .main-content {
+    margin-left: 0 !important;
+    padding: 15px;
+    width: 100%;
+  }
+
+  /* 4. Overlay (Latar Gelap) */
+  .sidebar-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+    display: block;
+    animation: fadeIn 0.3s;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
