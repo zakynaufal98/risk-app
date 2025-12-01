@@ -24,40 +24,49 @@ function App() {
   // ===============================
   // 🔥 AUTO LOGOUT FRONTEND (Tanpa Modal)
   // ===============================
-  const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 menit (bisa ubah)
+  // 30 * 60 * 1000  => 30 menit (30 detik * 60 * 1000 milidetik)
+  const IDLE_TIMEOUT = 30 * 60 * 1000; // ubah sesuai kebutuhan
   const activityEvents = ['mousemove', 'click', 'keydown', 'scroll', 'touchstart'];
 
   const setupAutoLogout = useCallback(() => {
-    let timer;
+    let timer = null;
+
+    const doSignOut = async () => {
+      try {
+        console.log('⏳ Auto logout: user idle terlalu lama.');
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn('Auto-logout signOut error:', err);
+      } finally {
+        // pastikan state aplikasi juga dibersihkan
+        try { setSession(null); } catch (e) {}
+        // pakai replace agar user tidak kembali ke halaman sebelumnya
+        window.location.replace('/auth');
+      }
+    };
 
     const resetTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(async () => {
-        console.log("⏳ Auto logout: user idle terlalu lama.");
-
-        await supabase.auth.signOut();
-        window.location.href = '/auth'; // redirect
-      }, IDLE_TIMEOUT);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(doSignOut, IDLE_TIMEOUT);
     };
 
     // Pasang listener
-    activityEvents.forEach(event => {
-      window.addEventListener(event, resetTimer);
-    });
+    activityEvents.forEach((ev) => window.addEventListener(ev, resetTimer, { passive: true }));
 
-    resetTimer(); // timer pertama
+    // Mulai timer pertama
+    resetTimer();
 
-    // Cleanup
+    // Return cleanup function agar bisa dipanggil di useEffect cleanup
     return () => {
-      clearTimeout(timer);
-      activityEvents.forEach(event => {
-        window.removeEventListener(event, resetTimer);
-      });
+      if (timer) clearTimeout(timer);
+      activityEvents.forEach((ev) => window.removeEventListener(ev, resetTimer));
     };
-  }, []);
+  }, [IDLE_TIMEOUT, activityEvents, setSession]);
 
   useEffect(() => {
-    setupAutoLogout(); // aktifkan sistem auto logout
+    // aktifkan sistem auto logout dan simpan cleanup
+    const cleanup = setupAutoLogout();
+    return cleanup;
   }, [setupAutoLogout]);
   // ===============================
 
@@ -66,19 +75,30 @@ function App() {
   // 🔥 AUTH STATE LISTENER
   // ===============================
   useEffect(() => {
+    let mounted = true;
+
+    // Ambil session saat awal load
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
+      setLoading(false);
+    }).catch((err) => {
+      console.error('getSession error:', err);
+      if (!mounted) return;
+      setSession(null);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setLoading(false);
-      }
-    );
+    // Listener perubahan auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      setLoading(false);
+    });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // ===============================
@@ -112,6 +132,7 @@ function App() {
               semester={semester}
               setSemester={setSemester}
               session={session}
+              setSession={setSession}         // <-- penting: teruskan setter agar Navbar/komponen lain bisa clear session
             />
           </ProtectedRoute>
         }

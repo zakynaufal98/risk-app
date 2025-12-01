@@ -257,11 +257,11 @@ const Dashboard = ({ semester }) => {
             </div>
 
             <div className="d-flex justify-content-center gap-2 flex-wrap">
-              <LegendItem color="#ee5d50" label="Sgt Tinggi" />
+              <LegendItem color="#ee5d50" label="Sangat Tinggi" />
               <LegendItem color="#ff7a3d" label="Tinggi" />
               <LegendItem color="#ffb547" label="Sedang" />
               <LegendItem color="#05cd99" label="Rendah" />
-              <LegendItem color="#0dcaf0" label="Sgt Rendah" />
+              <LegendItem color="#0dcaf0" label="Sangat Rendah" />
             </div>
           </div>
         </div>

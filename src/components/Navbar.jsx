@@ -3,40 +3,62 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
-// 1. Terima props 'session'
-const Navbar = ({ toggleSidebar, semester, setSemester, session }) => {
+// Terima setSession agar kita bisa hapus session di parent (App.jsx)
+const Navbar = ({ toggleSidebar, semester, setSemester, session, setSession }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // --- LOGIKA NAMA USER ---
   const user = session?.user;
-  
-  // Coba ambil nama dari metadata, kalau tidak ada pakai email
-  // user_metadata biasanya kosong kecuali diset saat register
   const fullName = user?.user_metadata?.full_name;
   const email = user?.email || 'User';
-
-  // Jika fullName ada pakai itu, jika tidak, ambil text sebelum @ dari email
   const displayName = fullName || email.split('@')[0];
-
-  // Buat Inisial (Contoh: "admin@gmail.com" -> "AD")
-  const getInitials = (name) => {
-    return name ? name.substring(0, 2).toUpperCase() : 'AU';
-  };
-  // ------------------------
+  const getInitials = (name) => name ? name.substring(0,2).toUpperCase() : 'AU';
 
   const getPageTitle = () => {
     switch (location.pathname) {
-      case '/': return { title: 'Main Dashboard', subtitle: 'Overview Risiko & Statistik' };
-      case '/dashboard': return { title: 'Main Dashboard', subtitle: 'Overview Risiko & Statistik' };
+      case '/': case '/dashboard': return { title: 'Main Dashboard', subtitle: 'Overview Risiko & Statistik' };
       case '/input': return { title: 'Input Data', subtitle: 'Formulir Register Risiko' };
       case '/database': return { title: 'Database', subtitle: 'Tabel Data Lengkap' };
       case '/kriteria': return { title: 'Kriteria', subtitle: 'Data Kriteria Lengkap' };
       default: return { title: 'Risk Management', subtitle: 'Sistem Informasi Risiko' };
     }
   };
-
   const { title, subtitle } = getPageTitle();
+
+  // robust logout
+  const handleLogout = async () => {
+    try {
+      // 1) Sign out (await!)
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error logging out:', error);
+        // optional: show toast
+      }
+
+      // 2) Clear session state in app (if parent passed setter)
+      if (typeof setSession === 'function') {
+        setSession(null);
+      }
+
+      // 3) Clear any Supabase-related localStorage keys (fallback)
+      try {
+        Object.keys(localStorage).forEach((k) => {
+          const kl = k.toLowerCase();
+          if (kl.includes('supabase') || kl.startsWith('sb-') || kl.includes('auth')) {
+            localStorage.removeItem(k);
+          }
+        });
+      } catch (err) {
+        console.warn('Failed to cleanup localStorage keys:', err);
+      }
+
+      // 4) Force a full reload to /auth to ensure nothing cached remains
+      //    replace() prevents adding history entry
+      window.location.replace('/auth');
+    } catch (err) {
+      console.error('Unexpected logout error:', err);
+    }
+  };
 
   const generateSemesterOptions = () => {
     const currentYear = new Date().getFullYear();
@@ -50,15 +72,8 @@ const Navbar = ({ toggleSidebar, semester, setSemester, session }) => {
     return options;
   };
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error('Error logging out:', error.message);
-    navigate('/auth'); 
-  };
-
   return (
     <div className="navbar-custom d-flex justify-content-between align-items-center w-100">
-      {/* KIRI */}
       <div className="d-flex align-items-center gap-3">
         <i className="bi bi-list fs-4 cursor-pointer d-lg-none" onClick={toggleSidebar}></i>
         <div>
@@ -67,24 +82,18 @@ const Navbar = ({ toggleSidebar, semester, setSemester, session }) => {
         </div>
       </div>
 
-      {/* KANAN */}
       <div className="d-flex align-items-center gap-3 bg-white p-2 rounded-pill shadow-sm">
-        
         <select 
           className="form-select border-0 bg-transparent fw-bold text-primary" 
           style={{width: '160px', fontSize:'0.85rem', cursor:'pointer', boxShadow: 'none'}}
           value={semester}
           onChange={(e) => setSemester(e.target.value)}
         >
-          {generateSemesterOptions().map(sem => (
-             <option key={sem} value={sem}>{sem}</option>
-          ))}
+          {generateSemesterOptions().map(sem => <option key={sem} value={sem}>{sem}</option>)}
         </select>
 
-        <div style={{width: '1px', height: '20px', background: '#e0e0e0'}}></div>
+        <div style={{width: '1px', height: '20px', background: '#e0e0e0'}} />
 
-        {/* USER DROPDOWN */}
-        {/* USER DROPDOWN (AVATAR) */}
         <div className="dropdown">
           <div 
             className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold dropdown-toggle" 
@@ -96,32 +105,19 @@ const Navbar = ({ toggleSidebar, semester, setSemester, session }) => {
           >
             {getInitials(displayName)}
           </div>
-          
-          {/* Menu Dropdown */}
+
           <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-            {/* Header Email */}
             <li>
-                <h6 className="dropdown-header text-truncate" style={{maxWidth: '220px'}}>
-                    {email}
-                </h6>
+              <h6 className="dropdown-header text-truncate" style={{maxWidth: '220px'}}>{email}</h6>
             </li>
-            
             <li><hr className="dropdown-divider" /></li>
-            
-            {/* Tombol Logout */}
             <li>
-              <button 
-                className="dropdown-item text-danger" 
-                onClick={handleLogout}
-                style={{ cursor: 'pointer' }} // Pastikan cursor pointer
-              >
-                <i className="bi bi-box-arrow-right fs-5"></i> 
-                <span>Logout</span>
+              <button className="dropdown-item text-danger" onClick={handleLogout} style={{ cursor: 'pointer' }}>
+                <i className="bi bi-box-arrow-right fs-5"></i> <span>Logout</span>
               </button>
             </li>
           </ul>
         </div>
-
       </div>
     </div>
   );
