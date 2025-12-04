@@ -25,31 +25,33 @@ export default function Auth() {
 
   // --- FUNGSI LOGIN ---
   const handleSignIn = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage(null);
-    
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    setLoading(false);
-    
-    if (error) {
-      let msg = error.message;
+  e.preventDefault();
+  setLoading(true);
+  setMessage(null);
+  
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  
+  setLoading(false);
+  
+  if (error) {
+    let msg = error.message;
 
-      // CEK PESAN ERROR DARI SUPABASE DAN GANTI KE INDONESIA
-      if (msg === 'Invalid login credentials') {
-        msg = 'Email atau password salah.';
-      } else if (msg.includes('Email not confirmed')) {
-        msg = 'Email belum diverifikasi.';
-      }
-
-      // Tampilkan pesan yang sudah diterjemahkan
-      setMessage({ type: 'danger', text: msg });
-      return;
+    if (msg === 'Invalid login credentials') {
+      msg = 'Email atau password salah.';
+    } else if (msg.includes('Email not confirmed')) {
+      msg = 'Email belum diverifikasi.';
     }
-    
-    navigate('/dashboard');
-  };
+
+    setMessage({ type: 'danger', text: msg });
+    return;
+  }
+
+  // ⬇⬇ TAMBAHAN: simpan timestamp login untuk auto-logout maxSessionAge
+  localStorage.setItem('login_at', Date.now().toString());
+
+  // lalu arahkan ke dashboard
+  navigate('/dashboard', { replace: true });
+};
 
   // --- FUNGSI RESET PASSWORD ---
   const handleResetPassword = async (e) => {

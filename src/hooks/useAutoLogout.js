@@ -4,33 +4,53 @@ import { supabase } from '../supabaseClient';
 
 /**
  * useAutoLogout
- * @param {Object} options
- *  - timeout (ms): waktu idle sebelum auto logout (default 30*60*1000 = 30 menit)
- *  - warningTime (ms): tampilkan modal peringatan X ms sebelum logout (default 60*1000 = 1 menit)
- *  - onLogout: optional callback setelah logout (mis: redirect)
- *  - checkSessionInterval (ms|null): jika ingin cek session server berkala (default null = no server check)
+ * - timeout: idle time sebelum logout (ms)
+ * - warningTime: waktu sebelum logout untuk tampilkan warning (ms)
+ * - maxSessionAge: batas maksimum umur login absolut (ms)
+ * - onLogout: callback setelah logout
+ * - checkSessionInterval: cek session Supabase berkala (ms)
  */
 export default function useAutoLogout({
-  timeout = 30 * 60 * 1000,
-  warningTime = 60 * 1000,
+  timeout = 30 * 60 * 1000,     // 30 menit idle
+  warningTime = 60 * 1000,      // 1 menit warning
+  maxSessionAge = null,         // contoh: 60 * 60 * 1000 (1 jam)
   onLogout = null,
   checkSessionInterval = null
 } = {}) {
+
   const [showWarning, setShowWarning] = useState(false);
-  const remainingRef = useRef(timeout);
+
   const lastActivityRef = useRef(Date.now());
   const logoutTimerRef = useRef(null);
   const warningTimerRef = useRef(null);
   const intervalRef = useRef(null);
 
+  // ===== Helper logout =====
+  const forceLogout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('signOut failed (ignored):', e);
+    } finally {
+      try {
+        localStorage.removeItem('login_at');
+      } catch {}
+
+     	setShowWarning(false);
+      if (typeof onLogout === 'function') onLogout();
+      else window.location.href = '/login';
+    }
+  }, [onLogout]);
+
+  // ===== Reset idle timers =====
   const resetTimers = useCallback(() => {
     lastActivityRef.current = Date.now();
-    // clear existing timers
+
     if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+
     setShowWarning(false);
 
-    // compute milliseconds until warning + logout from now
     const msUntilWarning = Math.max(0, timeout - warningTime);
     const msUntilLogout = Math.max(0, timeout);
 
@@ -38,81 +58,82 @@ export default function useAutoLogout({
       setShowWarning(true);
     }, msUntilWarning);
 
-    logoutTimerRef.current = setTimeout(async () => {
-      // perform logout
-      try {
-        await supabase.auth.signOut();
-      } catch (e) {
-        // ignore signOut errors, still treat as logged out
-        console.error('signOut error', e);
-      }
-      setShowWarning(false);
-      if (typeof onLogout === 'function') onLogout();
-      else window.location.href = '/login';
+    logoutTimerRef.current = setTimeout(() => {
+      forceLogout();
     }, msUntilLogout);
-  }, [timeout, warningTime, onLogout]);
 
-  // Activity handler (debounced-ish)
+  }, [timeout, warningTime, forceLogout]);
+
+  // ===== Activity handler =====
   const activityHandler = useCallback(() => {
-    // don't reset while warning is visible (user might be reviewing modal)
-    // but if user interacts while warning, we'll treat as keep-alive
     resetTimers();
   }, [resetTimers]);
 
+  // ===== Effect =====
   useEffect(() => {
-    // events to listen for user activity
+
+    // ---- 1) Pasang event listener aktivitas
     const events = [
       'mousemove', 'mousedown', 'keydown',
       'touchstart', 'pointermove', 'wheel', 'scroll'
     ];
-
     events.forEach(ev => window.addEventListener(ev, activityHandler, { passive: true }));
 
-    // visibility change: if user returns to tab, reset timers
+    // ---- 2) Return ke tab → reset idle
     const onVisibility = () => {
       if (!document.hidden) activityHandler();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
-    // initialize timers
+    // ---- 3) Init idle timer
     resetTimers();
 
-    // optional server session checker
+    // ---- 4) OPSI C: cek umur session absolut
+    if (maxSessionAge && typeof maxSessionAge === 'number') {
+      const loginAt = Number(localStorage.getItem('login_at') || 0);
+
+      // jika tidak ada timestamp → logout
+      if (!loginAt) {
+        forceLogout();
+      }
+
+      // jika umur session lewat batas → logout
+      if (loginAt && Date.now() - loginAt > maxSessionAge) {
+        forceLogout();
+      }
+    }
+
+    // ---- 5) Optional: cek session Supabase berkala (server side)
     if (checkSessionInterval && typeof checkSessionInterval === 'number') {
       intervalRef.current = setInterval(async () => {
         try {
           const { data } = await supabase.auth.getSession();
-          // if no session -> force logout now
           if (!data?.session) {
-            if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-            if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-            try { await supabase.auth.signOut(); } catch (e) {}
-            if (typeof onLogout === 'function') onLogout();
-            else window.location.href = '/login';
+            forceLogout();
           }
         } catch (e) {
-          console.error('session check failed', e);
+          console.error('Session check failed:', e);
         }
       }, checkSessionInterval);
     }
 
     return () => {
-      // cleanup
       events.forEach(ev => window.removeEventListener(ev, activityHandler));
       document.removeEventListener('visibilitychange', onVisibility);
+
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [activityHandler, resetTimers, checkSessionInterval]);
 
-  // function to call if user wants to stay logged in from the modal
+  }, [activityHandler, resetTimers, maxSessionAge, checkSessionInterval, forceLogout]);
+
+  // ===== Tombol "Tetap login" =====
   const stayLoggedIn = useCallback(() => {
     resetTimers();
     setShowWarning(false);
   }, [resetTimers]);
 
-  // expose state & actions
   return {
     showWarning,
     stayLoggedIn

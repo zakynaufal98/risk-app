@@ -1,25 +1,22 @@
 // src/components/ProtectedRoute.jsx
-import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 
-const ProtectedRoute = ({ children }) => {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+const ProtectedRoute = ({ session, children }) => {
+  const location = useLocation();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) return null; // Tidak perlu spinner lagi, karena App.jsx sudah handle
-
+  // Kalau belum login → lempar ke /auth
   if (!session) {
-    return <Navigate to="/auth" replace />;
+    return (
+      <Navigate
+        to="/auth"
+        replace
+        state={{ from: location }}
+      />
+    );
   }
 
+  // Kalau sudah login → render isi (MainLayout + halaman2 di dalamnya)
   return children;
 };
 

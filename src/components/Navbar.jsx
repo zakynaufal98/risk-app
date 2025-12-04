@@ -96,6 +96,8 @@ const Navbar = ({ toggleSidebar, semester, setSemester, session, setSession }) =
 
       <div className="d-flex align-items-center gap-3 bg-white p-2 rounded-pill shadow-sm">
         <select 
+          id="semesterSelect"
+          name="semester"
           className="form-select border-0 bg-transparent fw-bold text-primary" 
           style={{width: '160px', fontSize:'0.85rem', cursor:'pointer', boxShadow: 'none'}}
           value={semester}
