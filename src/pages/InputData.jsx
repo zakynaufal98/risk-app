@@ -122,145 +122,145 @@ const InputData = ({ semester }) => {
   // --- SUBMIT HANDLER ---
   // --- SUBMIT HANDLER ---
   const handleSubmit = async (e) => {
+  e.preventDefault();              // ⬅️ WAJIB PALING AWAL
 
-    const { data: { user } } = await supabase.auth.getUser();
+  setLoading(true);
+  setNotification(null);           // Reset notifikasi lama
 
+  try {
+    // 1. Ambil user
+    const { data, error: userErr } = await supabase.auth.getUser();
+    if (userErr) throw userErr;
+
+    const user = data?.user;
     if (!user) {
       setNotification({
         type: 'danger',
         message: 'User tidak terdeteksi. Silakan login ulang.'
       });
-      setLoading(false);
       return;
     }
 
+    // 2. NORMALISASI TEXT
+    const rawAset  = formData.aset;
+    const normAset = normalizeText(rawAset);
 
-    e.preventDefault();
-    setLoading(true);
-    setNotification(null); // Reset notifikasi lama
+    // 3. CEK MASTER (Cari ID Aset)
+    const { data: existingMaster, error: masterErr } = await supabase
+      .from('risk_master')
+      .select('*')
+      .eq('aset_norm', normAset)
+      .maybeSingle();
 
-    try {
-      // 1. NORMALISASI TEXT
-      const rawAset = formData.aset; 
-      const normAset = normalizeText(rawAset); 
+    if (masterErr) throw masterErr;
 
-      // 2. CEK MASTER (Cari ID Aset)
-      const { data: existingMaster, error: masterErr } = await supabase
+    let riskNo = existingMaster?.risk_no;
+
+    // 4. JIKA BELUM ADA DI MASTER, BUAT BARU
+    if (!riskNo) {
+      const { data: inserted, error: insertErr } = await supabase
         .from('risk_master')
-        .select('*')
-        .eq('aset_norm', normAset)
-        .maybeSingle();
+        .insert([{
+          aset: rawAset,
+          klasifikasi_aset: formData.klasifikasi_aset,
+          kategori: formData.kategori,
+          jenis_risiko: formData.jenis_risiko,
+          user_id: user.id,
+        }])
+        .select('risk_no')
+        .single();
 
-      if (masterErr) throw masterErr;
-
-      let riskNo = existingMaster?.risk_no;
-
-      // 3. JIKA BELUM ADA DI MASTER, BUAT BARU
-      if (!riskNo) {
-        const { data: inserted, error: insertErr } = await supabase
+      if (insertErr) {
+        // handle race condition: cek ulang
+        const { data: reMaster } = await supabase
           .from('risk_master')
-          .insert([{
-            aset: rawAset,              
-            // aset_norm tidak dikirim (dihitung database)
-            klasifikasi_aset: formData.klasifikasi_aset,
-            kategori: formData.kategori,
-            jenis_risiko: formData.jenis_risiko,
-            user_id: user.id,
-          }])
-          .select('risk_no')
-          .single();
+          .select('*')
+          .eq('aset_norm', normAset)
+          .maybeSingle();
 
-        if (insertErr) {
-            // Handle Race Condition
-            const { data: reMaster } = await supabase
-              .from('risk_master').select('*').eq('aset_norm', normAset).maybeSingle();
-            
-            if (reMaster) riskNo = reMaster.risk_no;
-            else throw insertErr;
-        } else {
-            riskNo = inserted.risk_no;
-        }
+        if (reMaster) riskNo = reMaster.risk_no;
+        else throw insertErr;
+      } else {
+        riskNo = inserted.risk_no;
       }
-
-      // ============================================================
-      // 4. CEK DUPLIKASI DI HISTORY (Mencegah input berulang di semester sama)
-      // ============================================================
-      const { data: duplicateCheck, error: dupErr } = await supabase
-        .from('risk_history')
-        .select('id')
-        .eq('risk_no', riskNo)
-        .eq('semester', formData.semester)
-        .maybeSingle();
-
-      if (dupErr) throw dupErr;
-
-      // JIKA ADA DUPLIKAT -> TAMPILKAN NOTIFIKASI KUNING (WARNING)
-      // (Bukan Pop-up Browser)
-      if (duplicateCheck) {
-        setNotification({
-          type: 'warning', // Akan menjadi alert kuning
-          message: `Aset "${rawAset}" sudah terdaftar di ${formData.semester}. Tidak bisa input ganda.`
-        });
-        setLoading(false);
-        return; // BERHENTI DI SINI (Data tidak disimpan)
-      }
-      // ============================================================
-
-      // 5. JIKA AMAN, INSERT KE HISTORY
-      const payloadHistory = {
-        risk_no: riskNo,
-        semester: formData.semester,
-        tanggal_identifikasi: formData.tanggal_identifikasi || new Date().toISOString(),
-        ancaman: formData.ancaman,
-        kerawanan: formData.kerawanan,
-        dampak_identifikasi: formData.dampak_identifikasi,
-        area_dampak: formData.area_dampak,
-        kontrol_saat_ini: formData.kontrol_saat_ini,
-        inherent_kemungkinan: parseInt(formData.inherent_kemungkinan) || 1,
-        inherent_dampak: parseInt(formData.inherent_dampak) || 1,
-        inherent_ir: parseFloat(formData.inherent_ir) || 0,
-        level_risiko: formData.level_risiko,
-        residual_kemungkinan: parseInt(formData.residual_kemungkinan) || 1,
-        residual_dampak: parseInt(formData.residual_dampak) || 1,
-        rr: parseFloat(formData.rr) || 0,
-        keputusan_penanganan: formData.keputusan_penanganan,
-        prioritas_risiko: formData.prioritas_risiko,
-        opsi_penanganan: formData.opsi_penanganan,
-        rencana_aksi: formData.rencana_aksi,
-        keluaran: formData.keluaran,
-        target_jadwal: formData.target_jadwal || null,
-        penanggung_jawab: formData.penanggung_jawab,
-        progress: parseInt(formData.progress) || 0,
-        status: formData.status,
-        rencana_kontrol_tambahan: formData.rencana_kontrol_tambahan,
-        risk_owner: formData.risk_owner,
-        user_id: user.id
-      };
-
-      const { error: historyErr } = await supabase.from('risk_history').insert([payloadHistory]);
-      if (historyErr) throw historyErr;
-
-      // SUKSES -> NOTIFIKASI HIJAU
-      setNotification({
-        type: 'success',
-        message: 'Data risiko berhasil disimpan! Mengalihkan ke database...'
-      });
-
-      setTimeout(() => {
-        window.location.href = '/database';
-      }, 1500);
-
-    } catch (err) {
-      console.error('Submit error:', err);
-      // ERROR -> NOTIFIKASI MERAH
-      setNotification({
-        type: 'danger',
-        message: 'Gagal menyimpan: ' + (err?.message || 'Terjadi kesalahan sistem.')
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // 5. CEK DUPLIKAT DI HISTORY
+    const { data: duplicateCheck, error: dupErr } = await supabase
+      .from('risk_history')
+      .select('id')
+      .eq('risk_no', riskNo)
+      .eq('semester', formData.semester)
+      .maybeSingle();
+
+    if (dupErr) throw dupErr;
+
+    if (duplicateCheck) {
+      setNotification({
+        type: 'warning',
+        message: `Aset "${rawAset}" sudah terdaftar di ${formData.semester}. Tidak bisa input ganda.`
+      });
+      return;
+    }
+
+    // 6. INSERT KE HISTORY
+    const payloadHistory = {
+      risk_no: riskNo,
+      semester: formData.semester,
+      tanggal_identifikasi: formData.tanggal_identifikasi || new Date().toISOString(),
+      ancaman: formData.ancaman,
+      kerawanan: formData.kerawanan,
+      dampak_identifikasi: formData.dampak_identifikasi,
+      area_dampak: formData.area_dampak,
+      kontrol_saat_ini: formData.kontrol_saat_ini,
+      inherent_kemungkinan: parseInt(formData.inherent_kemungkinan) || 1,
+      inherent_dampak: parseInt(formData.inherent_dampak) || 1,
+      inherent_ir: parseFloat(formData.inherent_ir) || 0,
+      level_risiko: formData.level_risiko,
+      residual_kemungkinan: parseInt(formData.residual_kemungkinan) || 1,
+      residual_dampak: parseInt(formData.residual_dampak) || 1,
+      rr: parseFloat(formData.rr) || 0,
+      keputusan_penanganan: formData.keputusan_penanganan,
+      prioritas_risiko: formData.prioritas_risiko,
+      opsi_penanganan: formData.opsi_penanganan,
+      rencana_aksi: formData.rencana_aksi,
+      keluaran: formData.keluaran,
+      target_jadwal: formData.target_jadwal || null,
+      penanggung_jawab: formData.penanggung_jawab,
+      progress: parseInt(formData.progress) || 0,
+      status: formData.status,
+      rencana_kontrol_tambahan: formData.rencana_kontrol_tambahan,
+      risk_owner: formData.risk_owner,
+      user_id: user.id
+    };
+
+    const { error: historyErr } = await supabase
+      .from('risk_history')
+      .insert([payloadHistory]);
+
+    if (historyErr) throw historyErr;
+
+    // 7. SUKSES
+    setNotification({
+      type: 'success',
+      message: 'Data risiko berhasil disimpan! Mengalihkan ke database...'
+    });
+
+    setTimeout(() => {
+      window.location.href = '/database';
+    }, 1500);
+
+  } catch (err) {
+    console.error('Submit error:', err);
+    setNotification({
+      type: 'danger',
+      message: 'Gagal menyimpan: ' + (err?.message || 'Terjadi kesalahan sistem.')
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const isDisabled = formData.keputusan_penanganan === 'Tidak';
   const inputClass = "form-control"; 
