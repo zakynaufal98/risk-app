@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ],
@@ -12,7 +13,7 @@
         { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=()" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; connect-src 'self' https://*.supabase.co https://*.vercel.app; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none';"
+          "value": "default-src 'self'; connect-src 'self' https://*.supabase.co https://*.vercel.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'; frame-ancestors 'none';"
         }
       ]
     }
