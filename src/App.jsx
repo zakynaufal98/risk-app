@@ -31,7 +31,7 @@ function App() {
   useAutoLogout({
     timeout: 20 * 60 * 1000,        // 20 menit idle
     warningTime: 2 * 60 * 1000,     // warning 2 menit
-    maxSessionAge: 10 * 1000,  // maksimum 1 jam login
+    maxSessionAge: 60 * 60 * 1000,  // maksimum 1 jam login
     onLogout: () => {
       setSession(null);
       navigate('/auth', { replace: true });
