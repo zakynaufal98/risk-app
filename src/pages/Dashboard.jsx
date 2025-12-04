@@ -195,23 +195,27 @@ const Dashboard = ({ semester }) => {
               </div>
             </div>
 
-            <div className="row align-items-end h-100">
-              <div className="col-md-9" style={{height: 220}}>
-                <Bar
-                  data={{
-                    labels: MONTH_LABELS,
-                    datasets: [{
-                      data: stats.monthlyData,
-                      backgroundColor: '#4318ff',
-                      barThickness: 20,
-                      hoverBackgroundColor: '#2d1eea'
-                    }]
-                  }}
-                  options={barOptions}
-                />
+            <div className="row align-items-end">
+              {/* Grafik */}
+              <div className="col-12 col-lg-9">
+                <div className="chart-bar-container">
+                  <Bar
+                    data={{
+                      labels: MONTH_LABELS,
+                      datasets: [{
+                        data: stats.monthlyData,
+                        backgroundColor: '#4318ff',
+                        barThickness: 20,
+                        hoverBackgroundColor: '#2d1eea'
+                      }]
+                    }}
+                    options={barOptions}
+                  />
+                </div>
               </div>
 
-              <div className="col-md-3 border-start ps-4 d-flex flex-column justify-content-center h-100">
+              {/* Panel kanan */}
+              <div className="col-12 col-lg-3 border-top border-lg-start ps-lg-4 pt-3 pt-lg-0 mt-3 mt-lg-0 d-flex flex-column justify-content-center">
                 <div className="mb-4">
                   <span className="text-muted d-block small">Tertinggi Bulan Ini</span>
                   <div className="d-flex align-items-center gap-2">
