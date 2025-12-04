@@ -25,39 +25,51 @@ const Navbar = ({ toggleSidebar, semester, setSemester, session, setSession }) =
   };
   const { title, subtitle } = getPageTitle();
 
-  // robust logout
+  // robust logout (cek session dulu, hindari revoke global yang memerlukan refresh token)
   const handleLogout = async () => {
     try {
-      // 1) Sign out (await!)
-      const { error } = await supabase.auth.signOut();
+      // 1) pastikan ada session di client
+      const { data } = await supabase.auth.getSession();
+      const currentSession = data?.session ?? null;
+
+      if (!currentSession) {
+        // tidak ada session: lakukan cleanup client-side dan redirect
+        cleanupAndRedirect();
+        return;
+      }
+
+      // 2) coba signOut tanpa global revoke dulu (lebih aman untuk browser/tablet)
+      const { error } = await supabase.auth.signOut({ global: false });
       if (error) {
-        console.error('Error logging out:', error);
-        // optional: show toast
+        console.warn('signOut returned error (non-fatal):', error.message);
+        // lanjutkan cleanup client-side walau ada error
       }
 
-      // 2) Clear session state in app (if parent passed setter)
-      if (typeof setSession === 'function') {
-        setSession(null);
-      }
+      // 3) pastikan state di parent di-clear
+      if (typeof setSession === 'function') setSession(null);
 
-      // 3) Clear any Supabase-related localStorage keys (fallback)
-      try {
-        Object.keys(localStorage).forEach((k) => {
-          const kl = k.toLowerCase();
-          if (kl.includes('supabase') || kl.startsWith('sb-') || kl.includes('auth')) {
-            localStorage.removeItem(k);
-          }
-        });
-      } catch (err) {
-        console.warn('Failed to cleanup localStorage keys:', err);
-      }
-
-      // 4) Force a full reload to /auth to ensure nothing cached remains
-      //    replace() prevents adding history entry
-      window.location.replace('/auth');
+      // 4) cleanup localStorage keys supabase (fallback)
+      cleanupAndRedirect();
     } catch (err) {
       console.error('Unexpected logout error:', err);
+      cleanupAndRedirect();
     }
+  };
+
+  const cleanupAndRedirect = () => {
+    try {
+      Object.keys(localStorage).forEach((k) => {
+        const kl = k.toLowerCase();
+        if (kl.includes('supabase') || kl.startsWith('sb-') || kl.includes('auth')) {
+          localStorage.removeItem(k);
+        }
+      });
+    } catch (e) {
+      console.warn('cleanup localStorage failed', e);
+    }
+
+    // replace supaya tidak meninggalkan history
+    window.location.replace('/auth');
   };
 
   const generateSemesterOptions = () => {
