@@ -1,6 +1,12 @@
 // src/App.jsx
-import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
 import MainLayout from './components/MainLayout';
@@ -12,11 +18,7 @@ import Kriteria from './pages/Kriteria';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 
-import useAutoLogout from './hooks/useAutoLogout';
-
 function App() {
-  const navigate = useNavigate();
-
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -25,43 +27,103 @@ function App() {
   const currentSem = `Semester ${today.getMonth() < 6 ? '1' : '2'} ${today.getFullYear()}`;
   const [semester, setSemester] = useState(currentSem);
 
-  // ===============================
-  // AUTO LOGOUT (idle + max session age)
-  // ===============================
-  useAutoLogout({
-    timeout: 20 * 60 * 1000,        // 20 menit idle
-    warningTime: 2 * 60 * 1000,     // warning 2 menit
-    maxSessionAge: 60 * 60 * 1000,  // maksimum 1 jam login
-    onLogout: () => {
-      setSession(null);
-      navigate('/auth', { replace: true });
-    },
-    checkSessionInterval: 60 * 1000 // cek ke Supabase tiap 1 menit
-  });
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // ===============================
-  // INIT SESSION & AUTH LISTENER
+  // 🔥 AUTO LOGOUT FRONTEND
+  // ===============================
+  const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 menit
+  const activityEvents = ['mousemove', 'click', 'keydown', 'scroll', 'touchstart'];
+
+  const setupAutoLogout = useCallback(() => {
+    let timer = null;
+
+    const doSignOut = async () => {
+      try {
+        console.log('⏳ Auto logout: idle terlalu lama.');
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn('Auto-logout signOut error:', err);
+      } finally {
+        try {
+          setSession(null);
+        } catch (_) {}
+
+        // bersihkan token lokal supabase
+        try {
+          Object.keys(localStorage).forEach((k) => {
+            const kl = k.toLowerCase();
+            if (kl.includes('supabase') || kl.startsWith('sb-')) {
+              localStorage.removeItem(k);
+            }
+          });
+        } catch (_) {}
+
+        window.location.replace('/auth');
+      }
+    };
+
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(doSignOut, IDLE_TIMEOUT);
+    };
+
+    activityEvents.forEach((ev) =>
+      window.addEventListener(ev, resetTimer, { passive: true })
+    );
+
+    resetTimer();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      activityEvents.forEach((ev) =>
+        window.removeEventListener(ev, resetTimer)
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const cleanup = setupAutoLogout();
+    return cleanup;
+  }, [setupAutoLogout]);
+
+  // ===============================
+  // 🔥 AUTH STATE (SUPABASE)
   // ===============================
   useEffect(() => {
     let mounted = true;
 
-    // Ambil session saat pertama load
-    supabase.auth.getSession()
-      .then(({ data }) => {
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
         if (!mounted) return;
-        setSession(data?.session ?? null);
+        setSession(session);
         setLoading(false);
       })
       .catch((err) => {
         console.error('getSession error:', err);
+
+        // kalau error refresh token, bersihkan token lokal
+        try {
+          Object.keys(localStorage).forEach((k) => {
+            const kl = k.toLowerCase();
+            if (kl.includes('supabase') || kl.startsWith('sb-')) {
+              localStorage.removeItem(k);
+            }
+          });
+        } catch (_) {}
+
         if (!mounted) return;
         setSession(null);
         setLoading(false);
       });
 
-    // Listener perubahan auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (!mounted) return;
+      setSession(s);
       setLoading(false);
     });
 
@@ -70,6 +132,18 @@ function App() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // ===============================
+  // 🔁 EFFECT UNTUK AUTO-REDIRECT
+  // ===============================
+  useEffect(() => {
+    if (loading) return;
+
+    // jika sudah login tapi masih di /auth -> pindahkan ke /dashboard
+    if (session && location.pathname === '/auth') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [session, loading, location.pathname, navigate]);
 
   const toggleSidebar = () => setIsSidebarOpen((s) => !s);
 
@@ -83,14 +157,13 @@ function App() {
 
   return (
     <Routes>
-
-      {/* AUTH (tanpa sidebar) */}
+      {/* Halaman Auth selalu bisa diakses, redirect di-handle di effect di atas */}
       <Route
         path="/auth"
-        element={!session ? <Auth /> : <Navigate to="/dashboard" replace />}
+        element={<Auth setSession={setSession} />}
       />
 
-      {/* MAIN APP (dengan sidebar, wajib login) */}
+      {/* Layout dengan sidebar, dibungkus ProtectedRoute */}
       <Route
         element={
           <ProtectedRoute session={session}>
