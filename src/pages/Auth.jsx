@@ -5,6 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import logoSimriskom from '../assets/Simriskom.png';
 
+const ACTIVITY_KEY = 'app_last_activity';
+const LOGIN_AT_KEY = 'login_at';
+const SIGNED_OUT_KEY = 'signed_out_at';
+
 export default function Auth({ setSession }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,7 +39,7 @@ export default function Auth({ setSession }) {
     setLoading(false);
 
     if (error) {
-      let msg = error.message;
+      let msg = error.message || 'Gagal autentikasi.';
       if (msg === 'Invalid login credentials') msg = 'Email atau password salah.';
       else if (msg.includes('Email not confirmed')) msg = 'Email belum diverifikasi.';
 
@@ -49,9 +53,17 @@ export default function Auth({ setSession }) {
     }
 
     // simpan timestamp login (opsional, untuk maxSessionAge manual)
-    localStorage.setItem('login_at', Date.now().toString());
+    try {
+      localStorage.setItem(LOGIN_AT_KEY, Date.now().toString());
+      localStorage.setItem(ACTIVITY_KEY, Date.now().toString()); // catat aktifitas terakhir saat login
+      // hapus tanda signed_out jika ada (sinkron antar-tab)
+      localStorage.removeItem(SIGNED_OUT_KEY);
+    } catch (e) {
+      // ignore storage errors
+      console.warn('localStorage write failed:', e);
+    }
 
-    // redirect ke dashboard
+    // redirect ke dashboard (SPA replace)
     navigate('/dashboard', { replace: true });
   };
 
