@@ -3,19 +3,228 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { calculateRiskScore, getRiskLevel } from '../utils/riskHelpers';
 
+/* === KOMPONEN BANTU: TABEL KEMUNGKINAN & DAMPAK === */
+// === KOMPONEN BANTU: TABEL KEMUNGKINAN & DAMPAK ===
+const LikelihoodImpactTable = () => (
+  <div className="table-responsive small">
+    {/* HEADER UTAMA */}
+    <p className="text-center text-muted mb-3">
+      Gunakan tabel ini sebagai acuan untuk memilih angka{' '}
+      <strong>kemungkinan (1–5)</strong> dan <strong>dampak (1–5)</strong> pada perhitungan risiko.
+    </p>
+
+    {/* TABEL KEMUNGKINAN */}
+    <h6 className="fw-bold text-center mb-2">Tabel Kemungkinan (Likelihood)</h6>
+    <table className="table table-sm table-bordered table-striped align-middle">
+      <thead>
+        <tr style={{ backgroundColor: '#0d6efd', color: '#fff' }}>
+          <th
+            className="text-center align-middle"
+            style={{ width: '8%', verticalAlign: 'middle' }}
+          >
+            Level
+          </th>
+          <th
+            className="text-center align-middle"
+            style={{ width: '25%', verticalAlign: 'middle' }}
+          >
+            Kategori
+          </th>
+          <th
+            className="text-center align-middle"
+            style={{ width: '20%', verticalAlign: 'middle' }}
+          >
+            Probabilitas
+          </th>
+          <th
+            className="text-center align-middle"
+            style={{ verticalAlign: 'middle' }}
+          >
+            Frekuensi Terjadi
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td className="fw-bold text-center align-middle">1</td>
+          <td className="align-middle">Hampir Tidak Terjadi</td>
+          <td className="text-center align-middle">x ≤ 5%</td>
+          <td className="align-middle">&lt; 2 kali dalam 1 tahun</td>
+        </tr>
+        <tr>
+          <td className="fw-bold text-center align-middle">2</td>
+          <td className="align-middle">Jarang Terjadi</td>
+          <td className="text-center align-middle">5% &lt; x ≤ 10%</td>
+          <td className="align-middle">2–5 kali dalam 1 tahun</td>
+        </tr>
+        <tr>
+          <td className="fw-bold text-center align-middle">3</td>
+          <td className="align-middle">Kadang-kadang Terjadi</td>
+          <td className="text-center align-middle">10% &lt; x ≤ 20%</td>
+          <td className="align-middle">6–9 kali dalam 1 tahun</td>
+        </tr>
+        <tr>
+          <td className="fw-bold text-center align-middle">4</td>
+          <td className="align-middle">Sering Terjadi</td>
+          <td className="text-center align-middle">20% &lt; x ≤ 50%</td>
+          <td className="align-middle">10–12 kali dalam 1 tahun</td>
+        </tr>
+        <tr>
+          <td className="fw-bold text-center align-middle">5</td>
+          <td className="align-middle">Hampir Pasti Terjadi</td>
+          <td className="text-center align-middle">x &gt; 50%</td>
+          <td className="align-middle">&gt; 12 kali dalam 1 tahun</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {/* TABEL DAMPAK */}
+    <h6 className="fw-bold text-center mt-4 mb-2">Tabel Dampak (Impact)</h6>
+    <table className="table table-sm table-bordered table-striped align-middle">
+      <thead>
+        <tr style={{ backgroundColor: '#f59e0b', color: '#111827' }}>
+          <th
+            className="text-center align-middle"
+            style={{ width: '8%', verticalAlign: 'middle' }}
+          >
+            Level
+          </th>
+          <th
+            className="text-center align-middle"
+            style={{ width: '18%', verticalAlign: 'middle' }}
+          >
+            Kategori
+          </th>
+          <th
+            className="text-center align-middle"
+            style={{ width: '18%', verticalAlign: 'middle' }}
+          >
+            Finansial
+          </th>
+          <th
+            className="text-center align-middle"
+            style={{ width: '18%', verticalAlign: 'middle' }}
+          >
+            Layanan Organisasi
+          </th>
+          <th
+            className="text-center align-middle"
+            style={{ width: '18%', verticalAlign: 'middle' }}
+          >
+            Operasional TIK
+          </th>
+          <th
+            className="text-center align-middle"
+            style={{ verticalAlign: 'middle' }}
+          >
+            Hukum &amp; Regulasi
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td className="fw-bold text-center align-middle">1</td>
+          <td className="align-middle">Tidak Signifikan</td>
+          <td className="align-middle">Kerugian ≤ Rp 10 juta</td>
+          <td className="align-middle">Proses tertunda ≤ 1 hari</td>
+          <td className="align-middle">Gangguan kecil</td>
+          <td className="align-middle">Tidak ada pelanggaran hukum</td>
+        </tr>
+        <tr>
+          <td className="fw-bold text-center align-middle">2</td>
+          <td className="align-middle">Kurang Signifikan</td>
+          <td className="align-middle">Rp 10 – 50 juta</td>
+          <td className="align-middle">Tertunda &gt; 1 s.d. 5 hari</td>
+          <td className="align-middle">Gangguan sporadis</td>
+          <td className="align-middle">Pelanggaran ringan (teguran)</td>
+        </tr>
+        <tr>
+          <td className="fw-bold text-center align-middle">3</td>
+          <td className="align-middle">Cukup Signifikan</td>
+          <td className="align-middle">Rp 50 – 100 juta</td>
+          <td className="align-middle">Tertunda &gt; 5 s.d. 15 hari</td>
+          <td className="align-middle">Terhenti sementara</td>
+          <td className="align-middle">Pelanggaran ringan dengan surat peringatan</td>
+        </tr>
+        <tr>
+          <td className="fw-bold text-center align-middle">4</td>
+          <td className="align-middle">Signifikan</td>
+          <td className="align-middle">Rp 100 – 500 juta</td>
+          <td className="align-middle">Tertunda &gt; 15 s.d. 30 hari</td>
+          <td className="align-middle">Terhenti lama</td>
+          <td className="align-middle">Pelanggaran sedang, sanksi administratif</td>
+        </tr>
+        <tr>
+          <td className="fw-bold text-center align-middle">5</td>
+          <td className="align-middle">Sangat Signifikan</td>
+          <td className="align-middle">&gt; Rp 500 juta</td>
+          <td className="align-middle">Tertunda &gt; 30 hari</td>
+          <td className="align-middle">Tidak berfungsi</td>
+          <td className="align-middle">Pelanggaran berat dengan sanksi hukum</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+);
+
+
+
+/* === KOMPONEN BANTU: MODAL BANTUAN RISIKO === */
+const RiskHelpModal = ({ title, visible, onClose }) => {
+  if (!visible) return null;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        zIndex: 1050
+      }}
+      className="d-flex align-items-center justify-content-center"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="card shadow-lg border-0" style={{ maxWidth: '900px', width: '95%', borderRadius: '18px' }}>
+        <div
+          className="card-header d-flex align-items-center justify-content-between"
+          style={{ borderTopLeftRadius: '18px', borderTopRightRadius: '18px', background: 'linear-gradient(90deg,#0d6efd,#22c55e)', color: '#fff' }}
+        >
+          <div className="d-flex align-items-center gap-2">
+            <i className="bi bi-question-circle-fill fs-4"></i>
+            <h5 className="m-0 fw-bold">{title}</h5>
+          </div>
+          <button type="button" className="btn btn-sm btn-light" onClick={onClose}>
+            Tutup
+          </button>
+        </div>
+        <div className="card-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          <p className="small text-muted">
+            Gunakan tabel ini sebagai acuan untuk memilih angka <strong>kemungkinan (1–5)</strong> dan <strong>dampak (1–5)</strong> pada perhitungan risiko.
+          </p>
+          <LikelihoodImpactTable />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ===================== KOMPONEN UTAMA ===================== */
+
 const InputData = ({ semester }) => {
   const [loading, setLoading] = useState(false);
-  
-  // Fungsi normalisasi: "  Server   Database  " -> "server database"
+
+  // helper normalisasi
   const normalizeText = (text) => {
     if (!text) return '';
-    return text.trim().toLowerCase().replace(/\s+/g, ' '); 
+    return text.trim().toLowerCase().replace(/\s+/g, ' ');
   };
 
-  // STATE: Notifikasi (Pengganti Alert Pop-up)
-  const [notification, setNotification] = useState(null); 
+  const [notification, setNotification] = useState(null);
 
-  // --- HELPER FUNCTIONS ---
+  // state untuk modal bantuan
+  const [showInherentHelp, setShowInherentHelp] = useState(false);
+  const [showResidualHelp, setShowResidualHelp] = useState(false);
+
   const getStatusFromProgress = (p) => {
     const n = Number(p) || 0;
     if (n === 0) return 'Open';
@@ -30,7 +239,6 @@ const InputData = ({ semester }) => {
     return 'bg-success text-white';
   };
 
-  // --- STATE FORM DATA ---
   const [formData, setFormData] = useState({
     jenis_risiko: 'Negatif',
     semester: semester,
@@ -64,15 +272,15 @@ const InputData = ({ semester }) => {
     progress: 0
   });
 
-  // --- EFFECTS ---
+  /* === EFFECTS === */
+
   useEffect(() => {
-    setFormData(prev => ({ ...prev, semester }));
+    setFormData((prev) => ({ ...prev, semester }));
   }, [semester]);
 
-  // Logika jika Keputusan = Tidak (Terima Risiko)
   useEffect(() => {
     if (formData.keputusan_penanganan === 'Tidak') {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         opsi_penanganan: 'Terima',
         rencana_aksi: '-',
@@ -83,226 +291,228 @@ const InputData = ({ semester }) => {
       }));
     } else {
       if (formData.opsi_penanganan === 'Terima') {
-        setFormData(prev => ({ ...prev, opsi_penanganan: 'Mitigasi', rencana_aksi: '' }));
+        setFormData((prev) => ({ ...prev, opsi_penanganan: 'Mitigasi', rencana_aksi: '' }));
       }
     }
-  }, [formData.keputusan_penanganan]);
+  }, [formData.keputusan_penanganan, formData.opsi_penanganan]);
 
-  // Hitung Inherent Risk Otomatis
+  // hitung inherent
   useEffect(() => {
     const L = parseInt(formData.inherent_kemungkinan) || 1;
     const I = parseInt(formData.inherent_dampak) || 1;
     const score = calculateRiskScore(L, I);
     const level = getRiskLevel(score);
-    setFormData(prev => ({ ...prev, inherent_ir: score, level_risiko: level }));
+    setFormData((prev) => ({ ...prev, inherent_ir: score, level_risiko: level }));
   }, [formData.inherent_kemungkinan, formData.inherent_dampak]);
 
-  // Hitung Residual Risk Otomatis
+  // hitung residual
   useEffect(() => {
     if (String(formData.terdapat_residual) === 'false') {
-      setFormData(prev => ({ ...prev, rr: 0, residual_dampak: 1, residual_kemungkinan: 1 }));
+      setFormData((prev) => ({ ...prev, rr: 0, residual_dampak: 1, residual_kemungkinan: 1 }));
       return;
     }
     const L = parseInt(formData.residual_kemungkinan) || 1;
     const I = parseInt(formData.residual_dampak) || 1;
     const score = calculateRiskScore(L, I);
-    setFormData(prev => ({ ...prev, rr: score }));
+    setFormData((prev) => ({ ...prev, rr: score }));
   }, [formData.residual_kemungkinan, formData.residual_dampak, formData.terdapat_residual]);
 
-  // Sync Status Progress
+  // sync status dari progress
   useEffect(() => {
-    setFormData(prev => ({ ...prev, status: getStatusFromProgress(prev.progress || 0) }));
+    setFormData((prev) => ({ ...prev, status: getStatusFromProgress(prev.progress || 0) }));
   }, [formData.progress]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // --- SUBMIT HANDLER ---
-  // --- SUBMIT HANDLER ---
+  /* === SUBMIT HANDLER === */
   const handleSubmit = async (e) => {
-  e.preventDefault();              // ⬅️ WAJIB PALING AWAL
+    e.preventDefault();
+    setLoading(true);
+    setNotification(null);
 
-  setLoading(true);
-  setNotification(null);           // Reset notifikasi lama
+    try {
+      const { data, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
 
-  try {
-    // 1. Ambil user
-    const { data, error: userErr } = await supabase.auth.getUser();
-    if (userErr) throw userErr;
+      const user = data?.user;
+      if (!user) {
+        setNotification({
+          type: 'danger',
+          message: 'User tidak terdeteksi. Silakan login ulang.'
+        });
+        return;
+      }
 
-    const user = data?.user;
-    if (!user) {
+      const rawAset = formData.aset;
+      const normAset = normalizeText(rawAset);
+
+      const { data: existingMaster, error: masterErr } = await supabase
+        .from('risk_master')
+        .select('*')
+        .eq('aset_norm', normAset)
+        .maybeSingle();
+
+      if (masterErr) throw masterErr;
+
+      let riskNo = existingMaster?.risk_no;
+
+      if (!riskNo) {
+        const { data: inserted, error: insertErr } = await supabase
+          .from('risk_master')
+          .insert([
+            {
+              aset: rawAset,
+              klasifikasi_aset: formData.klasifikasi_aset,
+              kategori: formData.kategori,
+              jenis_risiko: formData.jenis_risiko,
+              user_id: user.id
+            }
+          ])
+          .select('risk_no')
+          .single();
+
+        if (insertErr) {
+          const { data: reMaster } = await supabase
+            .from('risk_master')
+            .select('*')
+            .eq('aset_norm', normAset)
+            .maybeSingle();
+          if (reMaster) riskNo = reMaster.risk_no;
+          else throw insertErr;
+        } else {
+          riskNo = inserted.risk_no;
+        }
+      }
+
+      const { data: duplicateCheck, error: dupErr } = await supabase
+        .from('risk_history')
+        .select('id')
+        .eq('risk_no', riskNo)
+        .eq('semester', formData.semester)
+        .maybeSingle();
+
+      if (dupErr) throw dupErr;
+
+      if (duplicateCheck) {
+        setNotification({
+          type: 'warning',
+          message: `Aset "${rawAset}" sudah terdaftar di ${formData.semester}. Tidak bisa input ganda.`
+        });
+        return;
+      }
+
+      const payloadHistory = {
+        risk_no: riskNo,
+        semester: formData.semester,
+        tanggal_identifikasi: formData.tanggal_identifikasi || new Date().toISOString(),
+        ancaman: formData.ancaman,
+        kerawanan: formData.kerawanan,
+        dampak_identifikasi: formData.dampak_identifikasi,
+        area_dampak: formData.area_dampak,
+        kontrol_saat_ini: formData.kontrol_saat_ini,
+        inherent_kemungkinan: parseInt(formData.inherent_kemungkinan) || 1,
+        inherent_dampak: parseInt(formData.inherent_dampak) || 1,
+        inherent_ir: parseFloat(formData.inherent_ir) || 0,
+        level_risiko: formData.level_risiko,
+        residual_kemungkinan: parseInt(formData.residual_kemungkinan) || 1,
+        residual_dampak: parseInt(formData.residual_dampak) || 1,
+        rr: parseFloat(formData.rr) || 0,
+        keputusan_penanganan: formData.keputusan_penanganan,
+        prioritas_risiko: formData.prioritas_risiko,
+        opsi_penanganan: formData.opsi_penanganan,
+        rencana_aksi: formData.rencana_aksi,
+        keluaran: formData.keluaran,
+        target_jadwal: formData.target_jadwal || null,
+        penanggung_jawab: formData.penanggung_jawab,
+        progress: parseInt(formData.progress) || 0,
+        status: formData.status,
+        rencana_kontrol_tambahan: formData.rencana_kontrol_tambahan,
+        risk_owner: formData.risk_owner,
+        user_id: user.id
+      };
+
+      const { error: historyErr } = await supabase.from('risk_history').insert([payloadHistory]);
+      if (historyErr) throw historyErr;
+
+      setNotification({
+        type: 'success',
+        message: 'Data risiko berhasil disimpan! Mengalihkan ke database...'
+      });
+
+      setTimeout(() => {
+        window.location.href = '/database';
+      }, 1500);
+    } catch (err) {
+      console.error('Submit error:', err);
       setNotification({
         type: 'danger',
-        message: 'User tidak terdeteksi. Silakan login ulang.'
+        message: 'Gagal menyimpan: ' + (err?.message || 'Terjadi kesalahan sistem.')
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    // 2. NORMALISASI TEXT
-    const rawAset  = formData.aset;
-    const normAset = normalizeText(rawAset);
-
-    // 3. CEK MASTER (Cari ID Aset)
-    const { data: existingMaster, error: masterErr } = await supabase
-      .from('risk_master')
-      .select('*')
-      .eq('aset_norm', normAset)
-      .maybeSingle();
-
-    if (masterErr) throw masterErr;
-
-    let riskNo = existingMaster?.risk_no;
-
-    // 4. JIKA BELUM ADA DI MASTER, BUAT BARU
-    if (!riskNo) {
-      const { data: inserted, error: insertErr } = await supabase
-        .from('risk_master')
-        .insert([{
-          aset: rawAset,
-          klasifikasi_aset: formData.klasifikasi_aset,
-          kategori: formData.kategori,
-          jenis_risiko: formData.jenis_risiko,
-          user_id: user.id,
-        }])
-        .select('risk_no')
-        .single();
-
-      if (insertErr) {
-        // handle race condition: cek ulang
-        const { data: reMaster } = await supabase
-          .from('risk_master')
-          .select('*')
-          .eq('aset_norm', normAset)
-          .maybeSingle();
-
-        if (reMaster) riskNo = reMaster.risk_no;
-        else throw insertErr;
-      } else {
-        riskNo = inserted.risk_no;
-      }
-    }
-
-    // 5. CEK DUPLIKAT DI HISTORY
-    const { data: duplicateCheck, error: dupErr } = await supabase
-      .from('risk_history')
-      .select('id')
-      .eq('risk_no', riskNo)
-      .eq('semester', formData.semester)
-      .maybeSingle();
-
-    if (dupErr) throw dupErr;
-
-    if (duplicateCheck) {
-      setNotification({
-        type: 'warning',
-        message: `Aset "${rawAset}" sudah terdaftar di ${formData.semester}. Tidak bisa input ganda.`
-      });
-      return;
-    }
-
-    // 6. INSERT KE HISTORY
-    const payloadHistory = {
-      risk_no: riskNo,
-      semester: formData.semester,
-      tanggal_identifikasi: formData.tanggal_identifikasi || new Date().toISOString(),
-      ancaman: formData.ancaman,
-      kerawanan: formData.kerawanan,
-      dampak_identifikasi: formData.dampak_identifikasi,
-      area_dampak: formData.area_dampak,
-      kontrol_saat_ini: formData.kontrol_saat_ini,
-      inherent_kemungkinan: parseInt(formData.inherent_kemungkinan) || 1,
-      inherent_dampak: parseInt(formData.inherent_dampak) || 1,
-      inherent_ir: parseFloat(formData.inherent_ir) || 0,
-      level_risiko: formData.level_risiko,
-      residual_kemungkinan: parseInt(formData.residual_kemungkinan) || 1,
-      residual_dampak: parseInt(formData.residual_dampak) || 1,
-      rr: parseFloat(formData.rr) || 0,
-      keputusan_penanganan: formData.keputusan_penanganan,
-      prioritas_risiko: formData.prioritas_risiko,
-      opsi_penanganan: formData.opsi_penanganan,
-      rencana_aksi: formData.rencana_aksi,
-      keluaran: formData.keluaran,
-      target_jadwal: formData.target_jadwal || null,
-      penanggung_jawab: formData.penanggung_jawab,
-      progress: parseInt(formData.progress) || 0,
-      status: formData.status,
-      rencana_kontrol_tambahan: formData.rencana_kontrol_tambahan,
-      risk_owner: formData.risk_owner,
-      user_id: user.id
-    };
-
-    const { error: historyErr } = await supabase
-      .from('risk_history')
-      .insert([payloadHistory]);
-
-    if (historyErr) throw historyErr;
-
-    // 7. SUKSES
-    setNotification({
-      type: 'success',
-      message: 'Data risiko berhasil disimpan! Mengalihkan ke database...'
-    });
-
-    setTimeout(() => {
-      window.location.href = '/database';
-    }, 1500);
-
-  } catch (err) {
-    console.error('Submit error:', err);
-    setNotification({
-      type: 'danger',
-      message: 'Gagal menyimpan: ' + (err?.message || 'Terjadi kesalahan sistem.')
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const isDisabled = formData.keputusan_penanganan === 'Tidak';
-  const inputClass = "form-control"; 
+  const inputClass = 'form-control';
   const cardStyle = { borderRadius: '16px', overflow: 'visible' };
 
-  // --- RENDER COMPONENT ---
+  /* ===================== RENDER ===================== */
+
   return (
     <div className="container-fluid p-0">
-      
       {/* HEADER PAGE */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h3 className="fw-bold text-dark m-0">Input Risiko Baru</h3>
-          <p className="text-muted m-0">Pastikan data yang diinput valid untuk semester <span className="text-primary fw-bold">{semester}</span></p>
+          <p className="text-muted m-0">
+            Pastikan data yang diinput valid untuk semester{' '}
+            <span className="text-primary fw-bold">{semester}</span>
+          </p>
         </div>
-        <a href="/database" className="btn btn-white text-danger fw-bold border shadow-sm px-4 py-2" style={{ borderRadius: '10px' }}>
+        <a
+          href="/database"
+          className="btn btn-white text-danger fw-bold border shadow-sm px-4 py-2"
+          style={{ borderRadius: '10px' }}
+        >
           <i className="bi bi-x-lg me-2"></i> Batal
         </a>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="row g-4 align-items-start">
-          
-          {/* === KOLOM KIRI (FORM INPUT UTAMA) === */}
+          {/* KOLOM KIRI */}
           <div className="col-lg-8">
-            
             {/* 1. IDENTITAS & ASET */}
             <div className="card border-0 shadow-sm mb-4" style={cardStyle}>
-              <div className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0" style={{borderTopLeftRadius: '16px', borderTopRightRadius: '16px'}}>
-                 <div className="d-flex align-items-center gap-2 text-primary">
-                    <i className="bi bi-info-circle-fill fs-5"></i>
-                    <h5 className="fw-bold m-0">1. Identitas & Aset</h5>
-                 </div>
-                 <hr className="my-2 opacity-10"/>
+              <div
+                className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0"
+                style={{ borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}
+              >
+                <div className="d-flex align-items-center gap-2 text-primary">
+                  <i className="bi bi-info-circle-fill fs-5"></i>
+                  <h5 className="fw-bold m-0">1. Identitas & Aset</h5>
+                </div>
+                <hr className="my-2 opacity-10" />
               </div>
               <div className="card-body p-4">
                 <div className="row g-3">
                   <div className="col-12">
-                    <div className="d-flex align-items-center p-3 rounded-3 mb-2" style={{ backgroundColor: '#eef2ff', border: '1px dashed #6366f1' }}>
+                    <div
+                      className="d-flex align-items-center p-3 rounded-3 mb-2"
+                      style={{ backgroundColor: '#eef2ff', border: '1px dashed #6366f1' }}
+                    >
                       <i className="bi bi-calendar-check text-primary fs-3 me-3"></i>
                       <div>
-                        <small className="text-muted fw-bold text-uppercase d-block" style={{ fontSize: '0.7rem' }}>Target Semester</small>
+                        <small
+                          className="text-muted fw-bold text-uppercase d-block"
+                          style={{ fontSize: '0.7rem' }}
+                        >
+                          Target Semester
+                        </small>
                         <span className="fw-bold text-dark fs-5">{formData.semester}</span>
                       </div>
                       <div className="ms-auto badge bg-primary">Otomatis</div>
@@ -315,7 +525,12 @@ const InputData = ({ semester }) => {
                   </div>
                   <div className="col-md-4">
                     <label className="form-label small text-muted fw-bold">Klasifikasi Aset</label>
-                    <select name="klasifikasi_aset" className="form-select" onChange={handleChange} value={formData.klasifikasi_aset}>
+                    <select
+                      name="klasifikasi_aset"
+                      className="form-select"
+                      onChange={handleChange}
+                      value={formData.klasifikasi_aset}
+                    >
                       <option>Data dan Informasi</option>
                       <option>Perangkat Lunak</option>
                       <option>Perangkat Keras</option>
@@ -325,18 +540,36 @@ const InputData = ({ semester }) => {
                   </div>
                   <div className="col-md-4">
                     <label className="form-label small text-muted fw-bold">Jenis Risiko</label>
-                    <select name="jenis_risiko" className="form-select" onChange={handleChange} value={formData.jenis_risiko}>
+                    <select
+                      name="jenis_risiko"
+                      className="form-select"
+                      onChange={handleChange}
+                      value={formData.jenis_risiko}
+                    >
                       <option value="Negatif">Negatif</option>
                       <option value="Positif">Positif</option>
                     </select>
                   </div>
                   <div className="col-12">
                     <label className="form-label small text-muted fw-bold">Nama Aset / Sistem</label>
-                    <input type="text" name="aset" className={inputClass} placeholder="Contoh: Server Database Kepegawaian" required value={formData.aset} onChange={handleChange} />
+                    <input
+                      type="text"
+                      name="aset"
+                      className={inputClass}
+                      placeholder="Contoh: Server Database Kepegawaian"
+                      required
+                      value={formData.aset}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div className="col-12">
-                    <label className="form-label small text-muted fw-bold">Kategori SPBE</label>
-                    <select name="kategori" className="form-select" onChange={handleChange} value={formData.kategori}>
+                    <label className="form-label small text-muted fw-bold">Kategori</label>
+                    <select
+                      name="kategori"
+                      className="form-select"
+                      onChange={handleChange}
+                      value={formData.kategori}
+                    >
                       <option>Penyalahgunaan Kontrol Akses</option>
                       <option>Pencurian Data Pribadi</option>
                       <option>Insiden Web Defacement</option>
@@ -349,11 +582,19 @@ const InputData = ({ semester }) => {
                       <option>Kesalahan Pengelolaan Pihak Ketiga</option>
                       <option>Terganggunya Keberlangsungan Layanan</option>
                       <option>Insiden Serangan Malware</option>
+                      <option>Lainnya</option>
                     </select>
                   </div>
                   <div className="col-md-4">
                     <label className="form-label small text-muted fw-bold">Tanggal Identifikasi</label>
-                    <input type="date" name="tanggal_identifikasi" className={inputClass} value={formData.tanggal_identifikasi} onChange={handleChange} required />
+                    <input
+                      type="date"
+                      name="tanggal_identifikasi"
+                      className={inputClass}
+                      value={formData.tanggal_identifikasi}
+                      onChange={handleChange}
+                      required
+                    />
                   </div>
                 </div>
               </div>
@@ -361,30 +602,56 @@ const InputData = ({ semester }) => {
 
             {/* 2. ANALISA RISIKO */}
             <div className="card border-0 shadow-sm mb-4" style={cardStyle}>
-              <div className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0" style={{borderTopLeftRadius: '16px', borderTopRightRadius: '16px'}}>
-                 <div className="d-flex align-items-center gap-2 text-danger">
-                    <i className="bi bi-search fs-5"></i>
-                    <h5 className="fw-bold m-0">2. Analisa Risiko</h5>
-                 </div>
-                 <hr className="my-2 opacity-10"/>
+              <div
+                className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0"
+                style={{ borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}
+              >
+                <div className="d-flex align-items-center gap-2 text-danger">
+                  <i className="bi bi-search fs-5"></i>
+                  <h5 className="fw-bold m-0">2. Analisa Risiko</h5>
+                </div>
+                <hr className="my-2 opacity-10" />
               </div>
               <div className="card-body p-4">
                 <div className="row g-3">
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Ancaman (Threat)</label>
-                    <textarea name="ancaman" className={inputClass} rows="2" onChange={handleChange} value={formData.ancaman}></textarea>
+                    <textarea
+                      name="ancaman"
+                      className={inputClass}
+                      rows="2"
+                      onChange={handleChange}
+                      value={formData.ancaman}
+                    ></textarea>
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Kerawanan</label>
-                    <textarea name="kerawanan" className={inputClass} rows="2" onChange={handleChange} value={formData.kerawanan}></textarea>
+                    <textarea
+                      name="kerawanan"
+                      className={inputClass}
+                      rows="2"
+                      onChange={handleChange}
+                      value={formData.kerawanan}
+                    ></textarea>
                   </div>
                   <div className="col-md-12">
                     <label className="form-label small text-muted fw-bold">Uraian Dampak</label>
-                    <textarea name="dampak_identifikasi" className={inputClass} rows="2" onChange={handleChange} value={formData.dampak_identifikasi}></textarea>
+                    <textarea
+                      name="dampak_identifikasi"
+                      className={inputClass}
+                      rows="2"
+                      onChange={handleChange}
+                      value={formData.dampak_identifikasi}
+                    ></textarea>
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Area Dampak</label>
-                    <select name="area_dampak" className="form-select" onChange={handleChange} value={formData.area_dampak}>
+                    <select
+                      name="area_dampak"
+                      className="form-select"
+                      onChange={handleChange}
+                      value={formData.area_dampak}
+                    >
                       <option>Layanan Organisasi</option>
                       <option>Finansial</option>
                       <option>Reputasi</option>
@@ -396,7 +663,13 @@ const InputData = ({ semester }) => {
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Kontrol Saat Ini</label>
-                    <input type="text" name="kontrol_saat_ini" className={inputClass} onChange={handleChange} value={formData.kontrol_saat_ini} />
+                    <input
+                      type="text"
+                      name="kontrol_saat_ini"
+                      className={inputClass}
+                      onChange={handleChange}
+                      value={formData.kontrol_saat_ini}
+                    />
                   </div>
                 </div>
               </div>
@@ -404,25 +677,38 @@ const InputData = ({ semester }) => {
 
             {/* 3. EVALUASI RISIKO */}
             <div className="card border-0 shadow-sm mb-4" style={{ ...cardStyle, borderLeft: '5px solid #0d6efd' }}>
-               <div className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0" style={{borderTopRightRadius: '16px'}}>
-                 <div className="d-flex align-items-center gap-2 text-primary">
-                    <i className="bi bi-sliders fs-5"></i>
-                    <h5 className="fw-bold m-0">3. Evaluasi Risiko</h5>
-                 </div>
-                 <hr className="my-2 opacity-10"/>
+              <div
+                className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0"
+                style={{ borderTopRightRadius: '16px' }}
+              >
+                <div className="d-flex align-items-center gap-2 text-primary">
+                  <i className="bi bi-sliders fs-5"></i>
+                  <h5 className="fw-bold m-0">3. Evaluasi Risiko</h5>
+                </div>
+                <hr className="my-2 opacity-10" />
               </div>
               <div className="card-body p-4">
                 <div className="row g-3">
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Keputusan Penanganan</label>
-                    <select name="keputusan_penanganan" className="form-select fw-bold" value={formData.keputusan_penanganan} onChange={handleChange}>
+                    <select
+                      name="keputusan_penanganan"
+                      className="form-select fw-bold"
+                      value={formData.keputusan_penanganan}
+                      onChange={handleChange}
+                    >
                       <option value="Ya">Ya (Perlu Penanganan)</option>
                       <option value="Tidak">Tidak (Terima Risiko)</option>
                     </select>
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Prioritas Risiko</label>
-                    <select name="prioritas_risiko" className="form-select" value={formData.prioritas_risiko} onChange={handleChange}>
+                    <select
+                      name="prioritas_risiko"
+                      className="form-select"
+                      value={formData.prioritas_risiko}
+                      onChange={handleChange}
+                    >
                       <option value="1">1 (Sangat Tinggi)</option>
                       <option value="2">2 (Tinggi)</option>
                       <option value="3">3 (Sedang)</option>
@@ -435,152 +721,353 @@ const InputData = ({ semester }) => {
             </div>
 
             {/* 4. RENCANA PENANGANAN */}
-            <div className={`card border-0 shadow-sm mb-4 ${isDisabled ? 'bg-light opacity-75' : ''}`} style={{ ...cardStyle, borderLeft: '5px solid #198754' }}>
-              <div className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0" style={{borderTopRightRadius: '16px'}}>
-                 <div className="d-flex align-items-center gap-2 text-success">
-                    <i className="bi bi-shield-check fs-5"></i>
-                    <h5 className="fw-bold m-0">4. Rencana Penanganan</h5>
-                    {isDisabled && <span className="badge bg-secondary ms-2">Tidak Diperlukan</span>}
-                 </div>
-                 <hr className="my-2 opacity-10"/>
+            <div
+              className={`card border-0 shadow-sm mb-4 ${isDisabled ? 'bg-light opacity-75' : ''}`}
+              style={{ ...cardStyle, borderLeft: '5px solid #198754' }}
+            >
+              <div
+                className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0"
+                style={{ borderTopRightRadius: '16px' }}
+              >
+                <div className="d-flex align-items-center gap-2 text-success">
+                  <i className="bi bi-shield-check fs-5"></i>
+                  <h5 className="fw-bold m-0">4. Rencana Penanganan</h5>
+                  {isDisabled && <span className="badge bg-secondary ms-2">Tidak Diperlukan</span>}
+                </div>
+                <hr className="my-2 opacity-10" />
               </div>
               <div className="card-body p-4">
                 <div className="row g-3">
-                   <div className="col-md-4">
+                  <div className="col-md-4">
                     <label className="form-label small text-muted fw-bold">Opsi Penanganan</label>
-                    <select name="opsi_penanganan" className="form-select" onChange={handleChange} value={formData.opsi_penanganan} disabled={isDisabled}>
-                      <option>Mitigasi</option><option>Transfer</option><option>Hindari</option><option>Terima</option>
+                    <select
+                      name="opsi_penanganan"
+                      className="form-select"
+                      onChange={handleChange}
+                      value={formData.opsi_penanganan}
+                      disabled={isDisabled}
+                    >
+                      <option>Mitigasi</option>
+                      <option>Transfer</option>
+                      <option>Hindari</option>
+                      <option>Terima</option>
                     </select>
                   </div>
                   <div className="col-md-8">
                     <label className="form-label small text-muted fw-bold">Rencana Aksi</label>
-                    <input type="text" name="rencana_aksi" className={inputClass} onChange={handleChange} value={formData.rencana_aksi} disabled={isDisabled} placeholder={isDisabled ? '-' : 'Langkah konkret...'} />
+                    <input
+                      type="text"
+                      name="rencana_aksi"
+                      className={inputClass}
+                      onChange={handleChange}
+                      value={formData.rencana_aksi}
+                      disabled={isDisabled}
+                      placeholder={isDisabled ? '-' : 'Langkah konkret...'}
+                    />
                   </div>
-                  <div className="col-md-6"><label className="form-label small text-muted fw-bold">Keluaran (Output)</label><input type="text" name="keluaran" className={inputClass} onChange={handleChange} value={formData.keluaran} disabled={isDisabled} /></div>
-                  <div className="col-md-6"><label className="form-label small text-muted fw-bold">Target/Jadwal</label><input type="date" name="target_jadwal" className={inputClass} onChange={handleChange} value={formData.target_jadwal} disabled={isDisabled} /></div>
-                  <div className="col-md-6"><label className="form-label small text-muted fw-bold">Penanggung Jawab</label><input type="text" name="penanggung_jawab" className={inputClass} onChange={handleChange} value={formData.penanggung_jawab} disabled={isDisabled} /></div>
-                  <div className="col-md-6"><label className="form-label small text-muted fw-bold">Risk Owner</label><input type="text" name="risk_owner" className={inputClass} onChange={handleChange} value={formData.risk_owner} disabled={isDisabled} /></div>
-                  <div className="col-12"><label className="form-label small text-muted fw-bold">Kontrol Tambahan (Opsional)</label><input type="text" name="rencana_kontrol_tambahan" className={inputClass} onChange={handleChange} value={formData.rencana_kontrol_tambahan} disabled={isDisabled} /></div>
+                  <div className="col-md-6">
+                    <label className="form-label small text-muted fw-bold">Keluaran (Output)</label>
+                    <input
+                      type="text"
+                      name="keluaran"
+                      className={inputClass}
+                      onChange={handleChange}
+                      value={formData.keluaran}
+                      disabled={isDisabled}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label small text-muted fw-bold">Target/Jadwal</label>
+                    <input
+                      type="date"
+                      name="target_jadwal"
+                      className={inputClass}
+                      onChange={handleChange}
+                      value={formData.target_jadwal}
+                      disabled={isDisabled}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label small text-muted fw-bold">Penanggung Jawab</label>
+                    <input
+                      type="text"
+                      name="penanggung_jawab"
+                      className={inputClass}
+                      onChange={handleChange}
+                      value={formData.penanggung_jawab}
+                      disabled={isDisabled}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label small text-muted fw-bold">Risk Owner</label>
+                    <input
+                      type="text"
+                      name="risk_owner"
+                      className={inputClass}
+                      onChange={handleChange}
+                      value={formData.risk_owner}
+                      disabled={isDisabled}
+                    />
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label small text-muted fw-bold">Kontrol Tambahan (Opsional)</label>
+                    <input
+                      type="text"
+                      name="rencana_kontrol_tambahan"
+                      className={inputClass}
+                      onChange={handleChange}
+                      value={formData.rencana_kontrol_tambahan}
+                      disabled={isDisabled}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-
           </div>
 
-          {/* === KOLOM KANAN (STICKY CALCULATOR) === */}
+          {/* KOLOM KANAN (STICKY) */}
           <div className="col-lg-4">
             <div style={{ position: 'sticky', top: '20px' }}>
-              
-              {/* Card Inherent */}
+              {/* INHERENT */}
               <div className="card border-0 shadow-sm mb-3" style={{ ...cardStyle, background: '#fffbeb' }}>
                 <div className="card-body p-4 text-center">
-                   <h6 className="fw-bold text-warning m-0">INHERENT RISK (Awal)</h6>
-                   <small className="text-muted d-block mb-3">Sebelum Penanganan</small>
-                   
-                   <div className="row g-2 text-start">
-                      <div className="col-6">
-                        <label className="small fw-bold text-muted">Kemungkinan</label>
-                        <select name="inherent_kemungkinan" className="form-select border-warning bg-white" onChange={handleChange} value={formData.inherent_kemungkinan}>{[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}</select>
-                      </div>
-                      <div className="col-6">
-                        <label className="small fw-bold text-muted">Dampak</label>
-                        <select name="inherent_dampak" className="form-select border-warning bg-white" onChange={handleChange} value={formData.inherent_dampak}>{[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}</select>
-                      </div>
-                   </div>
+                  <div className="d-flex justify-content-center align-items-center gap-2 mb-1">
+                    <h6 className="fw-bold text-warning m-0">INHERENT RISK (Awal)</h6>
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 m-0 text-muted"
+                      onClick={() => setShowInherentHelp(true)}
+                      title="Lihat tabel penjelasan"
+                    >
+                      <i className="bi bi-question-circle-fill"></i>
+                    </button>
+                  </div>
+                  <small className="text-muted d-block mb-3">Sebelum Penanganan</small>
 
-                   <div className="mt-4 bg-white p-3 rounded-3 shadow-sm border border-warning-subtle">
-                      <div className="small text-muted">Skor Risiko</div>
-                      <h1 className="fw-bold m-0 text-dark display-4">{formData.inherent_ir}</h1>
-                      <span className={`badge ${getLevelBadge(formData.level_risiko)} rounded-pill px-4 py-2 mt-2`}>
-                        {String(formData.level_risiko).toUpperCase()}
-                      </span>
-                   </div>
+                  <div className="row g-2 text-start">
+                    <div className="col-6">
+                      <label className="small fw-bold text-muted">Kemungkinan</label>
+                      <select
+                        name="inherent_kemungkinan"
+                        className="form-select border-warning bg-white"
+                        onChange={handleChange}
+                        value={formData.inherent_kemungkinan}
+                      >
+                        {[1, 2, 3, 4, 5].map((v) => (
+                          <option key={v} value={v}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-6">
+                      <label className="small fw-bold text-muted">Dampak</label>
+                      <select
+                        name="inherent_dampak"
+                        className="form-select border-warning bg-white"
+                        onChange={handleChange}
+                        value={formData.inherent_dampak}
+                      >
+                        {[1, 2, 3, 4, 5].map((v) => (
+                          <option key={v} value={v}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 bg-white p-3 rounded-3 shadow-sm border border-warning-subtle">
+                    <div className="small text-muted">Skor Risiko</div>
+                    <h1 className="fw-bold m-0 text-dark display-4">{formData.inherent_ir}</h1>
+                    <span
+                      className={`badge ${getLevelBadge(
+                        formData.level_risiko
+                      )} rounded-pill px-4 py-2 mt-2`}
+                    >
+                      {String(formData.level_risiko).toUpperCase()}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Card Residual */}
+              {/* RESIDUAL */}
               <div className="card border-0 shadow-sm mb-3" style={{ ...cardStyle, background: '#f0fdf4' }}>
                 <div className="card-body p-4 text-center">
-                   <h6 className="fw-bold text-success m-0">RESIDUAL RISK</h6>
-                   <small className="text-muted d-block mb-3">Setelah Penanganan</small>
-                   
-                   <div className="mb-3">
-                     <select name="terdapat_residual" className="form-select form-select-sm border-success text-center fw-bold text-success bg-white" onChange={handleChange} value={formData.terdapat_residual}>
-                       <option value="true">Masih Ada Sisa Risiko</option>
-                       <option value="false">Risiko Hilang / Diterima</option>
-                     </select>
-                   </div>
+                  <div className="d-flex justify-content-center align-items-center gap-2 mb-1">
+                    <h6 className="fw-bold text-success m-0">RESIDUAL RISK</h6>
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 m-0 text-muted"
+                      onClick={() => setShowResidualHelp(true)}
+                      title="Lihat tabel penjelasan"
+                    >
+                      <i className="bi bi-question-circle-fill"></i>
+                    </button>
+                  </div>
+                  <small className="text-muted d-block mb-3">Setelah Penanganan</small>
 
-                   <div className="row g-2 text-start">
-                      <div className="col-6">
-                        <label className="small fw-bold text-muted">Kemungkinan</label>
-                        <select name="residual_kemungkinan" className="form-select border-success bg-white" onChange={handleChange} value={formData.residual_kemungkinan} disabled={String(formData.terdapat_residual) === 'false'}>{[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}</select>
-                      </div>
-                      <div className="col-6">
-                        <label className="small fw-bold text-muted">Dampak</label>
-                        <select name="residual_dampak" className="form-select border-success bg-white" onChange={handleChange} value={formData.residual_dampak} disabled={String(formData.terdapat_residual) === 'false'}>{[1,2,3,4,5].map(v => <option key={v} value={v}>{v}</option>)}</select>
-                      </div>
-                   </div>
+                  <div className="mb-3">
+                    <select
+                      name="terdapat_residual"
+                      className="form-select form-select-sm border-success text-center fw-bold text-success bg-white"
+                      onChange={handleChange}
+                      value={formData.terdapat_residual}
+                    >
+                      <option value="true">Masih Ada Sisa Risiko</option>
+                      <option value="false">Risiko Hilang / Diterima</option>
+                    </select>
+                  </div>
 
-                   <div className="mt-4 bg-white p-3 rounded-3 shadow-sm border border-success-subtle">
-                      <div className="small text-muted">Skor Sisa</div>
-                      <h1 className="fw-bold m-0 text-dark display-4">{String(formData.terdapat_residual) === 'false' ? 0 : formData.rr}</h1>
-                   </div>
+                  <div className="row g-2 text-start">
+                    <div className="col-6">
+                      <label className="small fw-bold text-muted">Kemungkinan</label>
+                      <select
+                        name="residual_kemungkinan"
+                        className="form-select border-success bg-white"
+                        onChange={handleChange}
+                        value={formData.residual_kemungkinan}
+                        disabled={String(formData.terdapat_residual) === 'false'}
+                      >
+                        {[1, 2, 3, 4, 5].map((v) => (
+                          <option key={v} value={v}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-6">
+                      <label className="small fw-bold text-muted">Dampak</label>
+                      <select
+                        name="residual_dampak"
+                        className="form-select border-success bg-white"
+                        onChange={handleChange}
+                        value={formData.residual_dampak}
+                        disabled={String(formData.terdapat_residual) === 'false'}
+                      >
+                        {[1, 2, 3, 4, 5].map((v) => (
+                          <option key={v} value={v}>
+                            {v}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 bg-white p-3 rounded-3 shadow-sm border border-success-subtle">
+                    <div className="small text-muted">Skor Sisa</div>
+                    <h1 className="fw-bold m-0 text-dark display-4">
+                      {String(formData.terdapat_residual) === 'false' ? 0 : formData.rr}
+                    </h1>
+                  </div>
                 </div>
               </div>
 
-               {/* Progress Slider */}
-               <div className="card border-0 shadow-sm" style={cardStyle}>
-                 <div className="card-body p-4">
-                    <label className="form-label small fw-bold d-flex justify-content-between mb-2">
-                       <span>Realisasi Progress</span>
-                       <span className="text-primary fw-bold">{formData.progress || 0}%</span>
-                    </label>
-                    <input type="range" className="form-range" min="0" max="100" step="5" name="progress" value={formData.progress || 0} onChange={handleChange} />
-                    <div className="d-flex justify-content-between small text-muted mt-1" style={{fontSize: '0.7rem'}}><span>0%</span><span>50%</span><span>100%</span></div>
-                    <div className="mt-3 text-center p-2 bg-light rounded-3">
-                       <small>Status: <strong className={formData.status === 'Closed' ? 'text-success' : 'text-primary'}>{formData.status}</strong></small>
-                    </div>
-                 </div>
-               </div>
-
+              {/* PROGRESS */}
+              <div className="card border-0 shadow-sm" style={cardStyle}>
+                <div className="card-body p-4">
+                  <label className="form-label small fw-bold d-flex justify-content-between mb-2">
+                    <span>Realisasi Progress</span>
+                    <span className="text-primary fw-bold">{formData.progress || 0}%</span>
+                  </label>
+                  <input
+                    type="range"
+                    className="form-range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    name="progress"
+                    value={formData.progress || 0}
+                    onChange={handleChange}
+                  />
+                  <div
+                    className="d-flex justify-content-between small text-muted mt-1"
+                    style={{ fontSize: '0.7rem' }}
+                  >
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                  </div>
+                  <div className="mt-3 text-center p-2 bg-light rounded-3">
+                    <small>
+                      Status:{' '}
+                      <strong
+                        className={formData.status === 'Closed' ? 'text-success' : 'text-primary'}
+                      >
+                        {formData.status}
+                      </strong>
+                    </small>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* === TOMBOL SUBMIT === */}
+          {/* FOOTER + NOTIF */}
           <div className="col-12 mt-2 pb-5">
-             
-             {/* --- ALERT NOTIFIKASI DI SINI --- */}
-             {notification && (
-                <div className={`alert alert-${notification.type} d-flex align-items-center shadow-sm border-0 mb-3`} role="alert" style={{ borderRadius: '12px' }}>
-                  <i className={`bi ${notification.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} fs-4 me-3`}></i>
+            {notification && (
+              <div
+                className={`alert alert-${notification.type} d-flex align-items-center shadow-sm border-0 mb-3`}
+                role="alert"
+                style={{ borderRadius: '12px' }}
+              >
+                <i
+                  className={`bi ${
+                    notification.type === 'success'
+                      ? 'bi-check-circle-fill'
+                      : 'bi-exclamation-triangle-fill'
+                  } fs-4 me-3`}
+                ></i>
+                <div>
+                  <strong className="d-block">
+                    {notification.type === 'success' ? 'Berhasil!' : 'Pemberitahuan Sistem'}
+                  </strong>
+                  <small>{notification.message}</small>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close ms-auto"
+                  onClick={() => setNotification(null)}
+                ></button>
+              </div>
+            )}
+
+            <div className="card border-0 shadow-sm p-4" style={cardStyle}>
+              <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div className="d-flex gap-3 align-items-center">
+                  <i className="bi bi-check-circle-fill text-primary fs-3"></i>
                   <div>
-                    <strong className="d-block">{notification.type === 'success' ? 'Berhasil!' : 'Pemberitahuan Sistem'}</strong>
-                    <small>{notification.message}</small>
+                    <h6 className="fw-bold m-0">Konfirmasi Simpan</h6>
+                    <small className="text-muted">
+                      Pastikan skor risiko di panel kanan sudah sesuai.
+                    </small>
                   </div>
-                  <button type="button" className="btn-close ms-auto" onClick={() => setNotification(null)}></button>
                 </div>
-             )}
-             {/* ------------------------------- */}
-
-             <div className="card border-0 shadow-sm p-4" style={cardStyle}>
-                <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                   <div className="d-flex gap-3 align-items-center">
-                     <i className="bi bi-check-circle-fill text-primary fs-3"></i>
-                     <div>
-                        <h6 className="fw-bold m-0">Konfirmasi Simpan</h6>
-                        <small className="text-muted">Pastikan skor risiko di panel kanan sudah sesuai.</small>
-                     </div>
-                   </div>
-                   <button type="submit" className="btn btn-primary py-3 px-5 fw-bold shadow-lg flex-grow-1 flex-md-grow-0" style={{ borderRadius: '12px', fontSize: '1.1rem' }} disabled={loading}>
-                      {loading ? 'Menyimpan...' : 'SIMPAN DATA RISIKO'}
-                   </button>
-                </div>
-             </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary py-3 px-5 fw-bold shadow-lg flex-grow-1 flex-md-grow-0"
+                  style={{ borderRadius: '12px', fontSize: '1.1rem' }}
+                  disabled={loading}
+                >
+                  {loading ? 'Menyimpan...' : 'SIMPAN DATA RISIKO'}
+                </button>
+              </div>
+            </div>
           </div>
-
         </div>
       </form>
+
+      {/* MODAL BANTUAN INHERENT & RESIDUAL */}
+      <RiskHelpModal
+        title="Panduan Penilaian Inherent Risk"
+        visible={showInherentHelp}
+        onClose={() => setShowInherentHelp(false)}
+      />
+      <RiskHelpModal
+        title="Panduan Penilaian Residual Risk"
+        visible={showResidualHelp}
+        onClose={() => setShowResidualHelp(false)}
+      />
     </div>
   );
 };
