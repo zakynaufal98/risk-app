@@ -4,42 +4,27 @@ import { supabase } from '../supabaseClient';
 import { calculateRiskScore, getRiskLevel } from '../utils/riskHelpers';
 
 /* === KOMPONEN BANTU: TABEL KEMUNGKINAN & DAMPAK === */
-// === KOMPONEN BANTU: TABEL KEMUNGKINAN & DAMPAK ===
 const LikelihoodImpactTable = () => (
   <div className="table-responsive small">
-    {/* HEADER UTAMA */}
     <p className="text-center text-muted mb-3">
       Gunakan tabel ini sebagai acuan untuk memilih angka{' '}
       <strong>kemungkinan (1–5)</strong> dan <strong>dampak (1–5)</strong> pada perhitungan risiko.
     </p>
 
-    {/* TABEL KEMUNGKINAN */}
     <h6 className="fw-bold text-center mb-2">Tabel Kemungkinan (Likelihood)</h6>
     <table className="table table-sm table-bordered table-striped align-middle">
       <thead>
         <tr style={{ backgroundColor: '#0d6efd', color: '#fff' }}>
-          <th
-            className="text-center align-middle"
-            style={{ width: '8%', verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ width: '8%', verticalAlign: 'middle' }}>
             Level
           </th>
-          <th
-            className="text-center align-middle"
-            style={{ width: '25%', verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ width: '25%', verticalAlign: 'middle' }}>
             Kategori
           </th>
-          <th
-            className="text-center align-middle"
-            style={{ width: '20%', verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ width: '20%', verticalAlign: 'middle' }}>
             Probabilitas
           </th>
-          <th
-            className="text-center align-middle"
-            style={{ verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ verticalAlign: 'middle' }}>
             Frekuensi Terjadi
           </th>
         </tr>
@@ -78,45 +63,26 @@ const LikelihoodImpactTable = () => (
       </tbody>
     </table>
 
-    {/* TABEL DAMPAK */}
     <h6 className="fw-bold text-center mt-4 mb-2">Tabel Dampak (Impact)</h6>
     <table className="table table-sm table-bordered table-striped align-middle">
       <thead>
         <tr style={{ backgroundColor: '#f59e0b', color: '#111827' }}>
-          <th
-            className="text-center align-middle"
-            style={{ width: '8%', verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ width: '8%', verticalAlign: 'middle' }}>
             Level
           </th>
-          <th
-            className="text-center align-middle"
-            style={{ width: '18%', verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ width: '18%', verticalAlign: 'middle' }}>
             Kategori
           </th>
-          <th
-            className="text-center align-middle"
-            style={{ width: '18%', verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ width: '18%', verticalAlign: 'middle' }}>
             Finansial
           </th>
-          <th
-            className="text-center align-middle"
-            style={{ width: '18%', verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ width: '18%', verticalAlign: 'middle' }}>
             Layanan Organisasi
           </th>
-          <th
-            className="text-center align-middle"
-            style={{ width: '18%', verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ width: '18%', verticalAlign: 'middle' }}>
             Operasional TIK
           </th>
-          <th
-            className="text-center align-middle"
-            style={{ verticalAlign: 'middle' }}
-          >
+          <th className="text-center align-middle" style={{ verticalAlign: 'middle' }}>
             Hukum &amp; Regulasi
           </th>
         </tr>
@@ -167,8 +133,6 @@ const LikelihoodImpactTable = () => (
   </div>
 );
 
-
-
 /* === KOMPONEN BANTU: MODAL BANTUAN RISIKO === */
 const RiskHelpModal = ({ title, visible, onClose }) => {
   if (!visible) return null;
@@ -208,8 +172,43 @@ const RiskHelpModal = ({ title, visible, onClose }) => {
   );
 };
 
-/* ===================== KOMPONEN UTAMA ===================== */
+/* === KOMPONEN BANTU: MODAL SUKSES === */
+const SuccessModal = ({ visible, message, onClose, onAddAnother, onViewDatabase }) => {
+  if (!visible) return null;
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 1100 }}
+      className="d-flex align-items-center justify-content-center"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="card shadow-lg border-0" style={{ width: 420, borderRadius: 12 }}>
+        <div className="card-body text-center p-4">
+          <div className="mb-3">
+            <i className="bi bi-check-circle-fill fs-1 text-success"></i>
+          </div>
+          <h5 className="fw-bold">Berhasil disimpan</h5>
+          <p className="text-muted small mb-4">{message || 'Data risiko berhasil disimpan. Form telah di-reset.'}</p>
+          <div className="d-flex gap-2 justify-content-center">
+            <button type="button" className="btn btn-outline-secondary" onClick={onAddAnother}>
+              Input Lagi
+            </button>
+            <button type="button" className="btn btn-primary" onClick={onViewDatabase}>
+              Lihat Database
+            </button>
+          </div>
+          <div className="mt-3">
+            <button type="button" className="btn btn-link small" onClick={onClose}>
+              Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
+/* ===================== KOMPONEN UTAMA ===================== */
 const InputData = ({ semester }) => {
   const [loading, setLoading] = useState(false);
 
@@ -220,6 +219,8 @@ const InputData = ({ semester }) => {
   };
 
   const [notification, setNotification] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // state untuk modal bantuan
   const [showInherentHelp, setShowInherentHelp] = useState(false);
@@ -239,9 +240,10 @@ const InputData = ({ semester }) => {
     return 'bg-success text-white';
   };
 
-  const [formData, setFormData] = useState({
+  // helper: buat object formData awal (mudah di-reset)
+  const getInitialForm = (sem) => ({
     jenis_risiko: 'Negatif',
-    semester: semester,
+    semester: sem,
     aset: '',
     klasifikasi_aset: 'Data dan Informasi',
     ancaman: '',
@@ -271,6 +273,8 @@ const InputData = ({ semester }) => {
     tanggal_identifikasi: new Date().toISOString().slice(0, 10),
     progress: 0
   });
+
+  const [formData, setFormData] = useState(() => getInitialForm(semester));
 
   /* === EFFECTS === */
 
@@ -325,6 +329,77 @@ const InputData = ({ semester }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // hapus error pada field yang diubah
+    setErrors((prev) => {
+      const copy = { ...prev };
+      if (copy[name]) delete copy[name];
+      return copy;
+    });
+  };
+
+  const renderError = (field) => {
+    if (!errors[field]) return null;
+    return <div className="form-text text-danger">{errors[field]}</div>;
+  };
+
+  /* === VALIDATION === */
+  const validate = () => {
+    const requiredFields = [
+      'aset',
+      'ancaman',
+      'kerawanan',
+      'dampak_identifikasi',
+      'area_dampak',
+      'kontrol_saat_ini',
+      'inherent_kemungkinan',
+      'inherent_dampak',
+      'keputusan_penanganan',
+      'prioritas_risiko'
+    ];
+
+    const newErrors = {};
+
+    requiredFields.forEach((f) => {
+      const val = formData[f];
+      if (val === undefined || val === null || String(val).trim() === '') {
+        newErrors[f] = 'Wajib diisi.';
+      }
+    });
+
+    // jika ada residual, pastikan residual fields diisi
+    if (String(formData.terdapat_residual) === 'true') {
+      if (!formData.residual_kemungkinan || String(formData.residual_kemungkinan).trim() === '') {
+        newErrors['residual_kemungkinan'] = 'Wajib diisi.';
+      }
+      if (!formData.residual_dampak || String(formData.residual_dampak).trim() === '') {
+        newErrors['residual_dampak'] = 'Wajib diisi.';
+      }
+    }
+
+    // jika keputusan penanganan Ya, beberapa field tambahan wajib
+    if (formData.keputusan_penanganan === 'Ya') {
+      ['rencana_aksi', 'keluaran', 'penanggung_jawab', 'risk_owner'].forEach((f) => {
+        if (!formData[f] || String(formData[f]).trim() === '') {
+          newErrors[f] = 'Wajib diisi ketika perlu penanganan.';
+        }
+      });
+    }
+
+    setErrors(newErrors);
+
+    // fokus ke field pertama yang bermasalah jika ada
+    if (Object.keys(newErrors).length > 0) {
+      const first = Object.keys(newErrors)[0];
+      try {
+        const el = document.querySelector(`[name="${first}"]`);
+        if (el && typeof el.focus === 'function') el.focus();
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    return Object.keys(newErrors).length === 0;
   };
 
   /* === SUBMIT HANDLER === */
@@ -334,6 +409,14 @@ const InputData = ({ semester }) => {
     setNotification(null);
 
     try {
+      // validasi client-side
+      const ok = validate();
+      if (!ok) {
+        setNotification({ type: 'danger', message: 'Terdapat field wajib yang belum diisi.' });
+        setLoading(false);
+        return;
+      }
+
       const { data, error: userErr } = await supabase.auth.getUser();
       if (userErr) throw userErr;
 
@@ -343,6 +426,7 @@ const InputData = ({ semester }) => {
           type: 'danger',
           message: 'User tidak terdeteksi. Silakan login ulang.'
         });
+        setLoading(false);
         return;
       }
 
@@ -401,6 +485,7 @@ const InputData = ({ semester }) => {
           type: 'warning',
           message: `Aset "${rawAset}" sudah terdaftar di ${formData.semester}. Tidak bisa input ganda.`
         });
+        setLoading(false);
         return;
       }
 
@@ -417,9 +502,9 @@ const InputData = ({ semester }) => {
         inherent_dampak: parseInt(formData.inherent_dampak) || 1,
         inherent_ir: parseFloat(formData.inherent_ir) || 0,
         level_risiko: formData.level_risiko,
-        residual_kemungkinan: parseInt(formData.residual_kemungkinan) || 1,
-        residual_dampak: parseInt(formData.residual_dampak) || 1,
-        rr: parseFloat(formData.rr) || 0,
+        residual_kemungkinan: String(formData.terdapat_residual) === 'false' ? 0 : parseInt(formData.residual_kemungkinan) || 1,
+        residual_dampak: String(formData.terdapat_residual) === 'false' ? 0 : parseInt(formData.residual_dampak) || 1,
+        rr: String(formData.terdapat_residual) === 'false' ? 0 : parseFloat(formData.rr) || 0,
         keputusan_penanganan: formData.keputusan_penanganan,
         prioritas_risiko: formData.prioritas_risiko,
         opsi_penanganan: formData.opsi_penanganan,
@@ -437,14 +522,11 @@ const InputData = ({ semester }) => {
       const { error: historyErr } = await supabase.from('risk_history').insert([payloadHistory]);
       if (historyErr) throw historyErr;
 
-      setNotification({
-        type: 'success',
-        message: 'Data risiko berhasil disimpan! Mengalihkan ke database...'
-      });
+      // tampilkan modal sukses dan reset form (tetap pertahankan semester)
+      setShowSuccessModal(true);
+      setFormData(getInitialForm(formData.semester));
+      setErrors({});
 
-      setTimeout(() => {
-        window.location.href = '/database';
-      }, 1500);
     } catch (err) {
       console.error('Submit error:', err);
       setNotification({
@@ -460,11 +542,29 @@ const InputData = ({ semester }) => {
   const inputClass = 'form-control';
   const cardStyle = { borderRadius: '16px', overflow: 'visible' };
 
+  /* helper modal actions */
+  const handleAddAnother = () => {
+    setShowSuccessModal(false);
+    try {
+      const el = document.querySelector('[name="aset"]');
+      if (el && typeof el.focus === 'function') el.focus();
+    } catch (e) {
+      /* ignore */
+    }
+  };
+
+  const handleViewDatabase = () => {
+    try {
+      window.location.href = '/database';
+    } catch (e) {
+      /* ignore */
+    }
+  };
+
   /* ===================== RENDER ===================== */
 
   return (
     <div className="container-fluid p-0">
-      {/* HEADER PAGE */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h3 className="fw-bold text-dark m-0">Input Risiko Baru</h3>
@@ -482,11 +582,9 @@ const InputData = ({ semester }) => {
         </a>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="row g-4 align-items-start">
-          {/* KOLOM KIRI */}
           <div className="col-lg-8">
-            {/* 1. IDENTITAS & ASET */}
             <div className="card border-0 shadow-sm mb-4" style={cardStyle}>
               <div
                 className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0"
@@ -527,7 +625,7 @@ const InputData = ({ semester }) => {
                     <label className="form-label small text-muted fw-bold">Klasifikasi Aset</label>
                     <select
                       name="klasifikasi_aset"
-                      className="form-select"
+                      className={`form-select ${errors.klasifikasi_aset ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.klasifikasi_aset}
                     >
@@ -537,36 +635,38 @@ const InputData = ({ semester }) => {
                       <option>Sarana Pendukung</option>
                       <option>SDM & Pihak Ketiga</option>
                     </select>
+                    {renderError('klasifikasi_aset')}
                   </div>
                   <div className="col-md-4">
                     <label className="form-label small text-muted fw-bold">Jenis Risiko</label>
                     <select
                       name="jenis_risiko"
-                      className="form-select"
+                      className={`form-select ${errors.jenis_risiko ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.jenis_risiko}
                     >
                       <option value="Negatif">Negatif</option>
                       <option value="Positif">Positif</option>
                     </select>
+                    {renderError('jenis_risiko')}
                   </div>
                   <div className="col-12">
                     <label className="form-label small text-muted fw-bold">Nama Aset / Sistem</label>
                     <input
                       type="text"
                       name="aset"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.aset ? 'is-invalid' : ''}`}
                       placeholder="Contoh: Server Database Kepegawaian"
-                      required
                       value={formData.aset}
                       onChange={handleChange}
                     />
+                    {renderError('aset')}
                   </div>
                   <div className="col-12">
                     <label className="form-label small text-muted fw-bold">Kategori</label>
                     <select
                       name="kategori"
-                      className="form-select"
+                      className={`form-select ${errors.kategori ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.kategori}
                     >
@@ -584,23 +684,23 @@ const InputData = ({ semester }) => {
                       <option>Insiden Serangan Malware</option>
                       <option>Lainnya</option>
                     </select>
+                    {renderError('kategori')}
                   </div>
                   <div className="col-md-4">
                     <label className="form-label small text-muted fw-bold">Tanggal Identifikasi</label>
                     <input
                       type="date"
                       name="tanggal_identifikasi"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.tanggal_identifikasi ? 'is-invalid' : ''}`}
                       value={formData.tanggal_identifikasi}
                       onChange={handleChange}
-                      required
                     />
+                    {renderError('tanggal_identifikasi')}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 2. ANALISA RISIKO */}
             <div className="card border-0 shadow-sm mb-4" style={cardStyle}>
               <div
                 className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0"
@@ -618,37 +718,40 @@ const InputData = ({ semester }) => {
                     <label className="form-label small text-muted fw-bold">Ancaman (Threat)</label>
                     <textarea
                       name="ancaman"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.ancaman ? 'is-invalid' : ''}`}
                       rows="2"
                       onChange={handleChange}
                       value={formData.ancaman}
                     ></textarea>
+                    {renderError('ancaman')}
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Kerawanan</label>
                     <textarea
                       name="kerawanan"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.kerawanan ? 'is-invalid' : ''}`}
                       rows="2"
                       onChange={handleChange}
                       value={formData.kerawanan}
                     ></textarea>
+                    {renderError('kerawanan')}
                   </div>
                   <div className="col-md-12">
                     <label className="form-label small text-muted fw-bold">Uraian Dampak</label>
                     <textarea
                       name="dampak_identifikasi"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.dampak_identifikasi ? 'is-invalid' : ''}`}
                       rows="2"
                       onChange={handleChange}
                       value={formData.dampak_identifikasi}
                     ></textarea>
+                    {renderError('dampak_identifikasi')}
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Area Dampak</label>
                     <select
                       name="area_dampak"
-                      className="form-select"
+                      className={`form-select ${errors.area_dampak ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.area_dampak}
                     >
@@ -660,22 +763,23 @@ const InputData = ({ semester }) => {
                       <option>Hukum dan Regulasi</option>
                       <option>SDM</option>
                     </select>
+                    {renderError('area_dampak')}
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Kontrol Saat Ini</label>
                     <input
                       type="text"
                       name="kontrol_saat_ini"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.kontrol_saat_ini ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.kontrol_saat_ini}
                     />
+                    {renderError('kontrol_saat_ini')}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 3. EVALUASI RISIKO */}
             <div className="card border-0 shadow-sm mb-4" style={{ ...cardStyle, borderLeft: '5px solid #0d6efd' }}>
               <div
                 className="card-header bg-white border-bottom-0 pt-4 px-4 pb-0"
@@ -693,19 +797,20 @@ const InputData = ({ semester }) => {
                     <label className="form-label small text-muted fw-bold">Keputusan Penanganan</label>
                     <select
                       name="keputusan_penanganan"
-                      className="form-select fw-bold"
+                      className={`form-select fw-bold ${errors.keputusan_penanganan ? 'is-invalid' : ''}`}
                       value={formData.keputusan_penanganan}
                       onChange={handleChange}
                     >
                       <option value="Ya">Ya (Perlu Penanganan)</option>
                       <option value="Tidak">Tidak (Terima Risiko)</option>
                     </select>
+                    {renderError('keputusan_penanganan')}
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Prioritas Risiko</label>
                     <select
                       name="prioritas_risiko"
-                      className="form-select"
+                      className={`form-select ${errors.prioritas_risiko ? 'is-invalid' : ''}`}
                       value={formData.prioritas_risiko}
                       onChange={handleChange}
                     >
@@ -715,12 +820,12 @@ const InputData = ({ semester }) => {
                       <option value="4">4 (Rendah)</option>
                       <option value="5">5 (Sangat Rendah)</option>
                     </select>
+                    {renderError('prioritas_risiko')}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 4. RENCANA PENANGANAN */}
             <div
               className={`card border-0 shadow-sm mb-4 ${isDisabled ? 'bg-light opacity-75' : ''}`}
               style={{ ...cardStyle, borderLeft: '5px solid #198754' }}
@@ -758,23 +863,25 @@ const InputData = ({ semester }) => {
                     <input
                       type="text"
                       name="rencana_aksi"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.rencana_aksi ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.rencana_aksi}
                       disabled={isDisabled}
                       placeholder={isDisabled ? '-' : 'Langkah konkret...'}
                     />
+                    {renderError('rencana_aksi')}
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Keluaran (Output)</label>
                     <input
                       type="text"
                       name="keluaran"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.keluaran ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.keluaran}
                       disabled={isDisabled}
                     />
+                    {renderError('keluaran')}
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Target/Jadwal</label>
@@ -792,22 +899,24 @@ const InputData = ({ semester }) => {
                     <input
                       type="text"
                       name="penanggung_jawab"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.penanggung_jawab ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.penanggung_jawab}
                       disabled={isDisabled}
                     />
+                    {renderError('penanggung_jawab')}
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small text-muted fw-bold">Risk Owner</label>
                     <input
                       type="text"
                       name="risk_owner"
-                      className={inputClass}
+                      className={`${inputClass} ${errors.risk_owner ? 'is-invalid' : ''}`}
                       onChange={handleChange}
                       value={formData.risk_owner}
                       disabled={isDisabled}
                     />
+                    {renderError('risk_owner')}
                   </div>
                   <div className="col-12">
                     <label className="form-label small text-muted fw-bold">Kontrol Tambahan (Opsional)</label>
@@ -825,10 +934,8 @@ const InputData = ({ semester }) => {
             </div>
           </div>
 
-          {/* KOLOM KANAN (STICKY) */}
           <div className="col-lg-4">
             <div style={{ position: 'sticky', top: '20px' }}>
-              {/* INHERENT */}
               <div className="card border-0 shadow-sm mb-3" style={{ ...cardStyle, background: '#fffbeb' }}>
                 <div className="card-body p-4 text-center">
                   <div className="d-flex justify-content-center align-items-center gap-2 mb-1">
@@ -849,7 +956,7 @@ const InputData = ({ semester }) => {
                       <label className="small fw-bold text-muted">Kemungkinan</label>
                       <select
                         name="inherent_kemungkinan"
-                        className="form-select border-warning bg-white"
+                        className={`form-select border-warning bg-white ${errors.inherent_kemungkinan ? 'is-invalid' : ''}`}
                         onChange={handleChange}
                         value={formData.inherent_kemungkinan}
                       >
@@ -859,12 +966,13 @@ const InputData = ({ semester }) => {
                           </option>
                         ))}
                       </select>
+                      {renderError('inherent_kemungkinan')}
                     </div>
                     <div className="col-6">
                       <label className="small fw-bold text-muted">Dampak</label>
                       <select
                         name="inherent_dampak"
-                        className="form-select border-warning bg-white"
+                        className={`form-select border-warning bg-white ${errors.inherent_dampak ? 'is-invalid' : ''}`}
                         onChange={handleChange}
                         value={formData.inherent_dampak}
                       >
@@ -874,24 +982,20 @@ const InputData = ({ semester }) => {
                           </option>
                         ))}
                       </select>
+                      {renderError('inherent_dampak')}
                     </div>
                   </div>
 
                   <div className="mt-4 bg-white p-3 rounded-3 shadow-sm border border-warning-subtle">
                     <div className="small text-muted">Skor Risiko</div>
                     <h1 className="fw-bold m-0 text-dark display-4">{formData.inherent_ir}</h1>
-                    <span
-                      className={`badge ${getLevelBadge(
-                        formData.level_risiko
-                      )} rounded-pill px-4 py-2 mt-2`}
-                    >
+                    <span className={`badge ${getLevelBadge(formData.level_risiko)} rounded-pill px-4 py-2 mt-2`}>
                       {String(formData.level_risiko).toUpperCase()}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* RESIDUAL */}
               <div className="card border-0 shadow-sm mb-3" style={{ ...cardStyle, background: '#f0fdf4' }}>
                 <div className="card-body p-4 text-center">
                   <div className="d-flex justify-content-center align-items-center gap-2 mb-1">
@@ -924,7 +1028,7 @@ const InputData = ({ semester }) => {
                       <label className="small fw-bold text-muted">Kemungkinan</label>
                       <select
                         name="residual_kemungkinan"
-                        className="form-select border-success bg-white"
+                        className={`form-select border-success bg-white ${errors.residual_kemungkinan ? 'is-invalid' : ''}`}
                         onChange={handleChange}
                         value={formData.residual_kemungkinan}
                         disabled={String(formData.terdapat_residual) === 'false'}
@@ -935,12 +1039,13 @@ const InputData = ({ semester }) => {
                           </option>
                         ))}
                       </select>
+                      {renderError('residual_kemungkinan')}
                     </div>
                     <div className="col-6">
                       <label className="small fw-bold text-muted">Dampak</label>
                       <select
                         name="residual_dampak"
-                        className="form-select border-success bg-white"
+                        className={`form-select border-success bg-white ${errors.residual_dampak ? 'is-invalid' : ''}`}
                         onChange={handleChange}
                         value={formData.residual_dampak}
                         disabled={String(formData.terdapat_residual) === 'false'}
@@ -951,6 +1056,7 @@ const InputData = ({ semester }) => {
                           </option>
                         ))}
                       </select>
+                      {renderError('residual_dampak')}
                     </div>
                   </div>
 
@@ -963,7 +1069,6 @@ const InputData = ({ semester }) => {
                 </div>
               </div>
 
-              {/* PROGRESS */}
               <div className="card border-0 shadow-sm" style={cardStyle}>
                 <div className="card-body p-4">
                   <label className="form-label small fw-bold d-flex justify-content-between mb-2">
@@ -972,7 +1077,7 @@ const InputData = ({ semester }) => {
                   </label>
                   <input
                     type="range"
-                    className="form-range"
+                    className={`form-range ${errors.progress ? 'is-invalid' : ''}`}
                     min="0"
                     max="100"
                     step="5"
@@ -980,10 +1085,8 @@ const InputData = ({ semester }) => {
                     value={formData.progress || 0}
                     onChange={handleChange}
                   />
-                  <div
-                    className="d-flex justify-content-between small text-muted mt-1"
-                    style={{ fontSize: '0.7rem' }}
-                  >
+                  {renderError('progress')}
+                  <div className="d-flex justify-content-between small text-muted mt-1" style={{ fontSize: '0.7rem' }}>
                     <span>0%</span>
                     <span>50%</span>
                     <span>100%</span>
@@ -991,9 +1094,7 @@ const InputData = ({ semester }) => {
                   <div className="mt-3 text-center p-2 bg-light rounded-3">
                     <small>
                       Status:{' '}
-                      <strong
-                        className={formData.status === 'Closed' ? 'text-success' : 'text-primary'}
-                      >
+                      <strong className={formData.status === 'Closed' ? 'text-success' : 'text-primary'}>
                         {formData.status}
                       </strong>
                     </small>
@@ -1003,7 +1104,6 @@ const InputData = ({ semester }) => {
             </div>
           </div>
 
-          {/* FOOTER + NOTIF */}
           <div className="col-12 mt-2 pb-5">
             {notification && (
               <div
@@ -1057,7 +1157,6 @@ const InputData = ({ semester }) => {
         </div>
       </form>
 
-      {/* MODAL BANTUAN INHERENT & RESIDUAL */}
       <RiskHelpModal
         title="Panduan Penilaian Inherent Risk"
         visible={showInherentHelp}
@@ -1067,6 +1166,14 @@ const InputData = ({ semester }) => {
         title="Panduan Penilaian Residual Risk"
         visible={showResidualHelp}
         onClose={() => setShowResidualHelp(false)}
+      />
+
+      <SuccessModal
+        visible={showSuccessModal}
+        message="Data risiko berhasil disimpan. Form telah di-reset."
+        onClose={() => setShowSuccessModal(false)}
+        onAddAnother={handleAddAnother}
+        onViewDatabase={handleViewDatabase}
       />
     </div>
   );
