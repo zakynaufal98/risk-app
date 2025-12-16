@@ -502,6 +502,11 @@ const InputData = ({ semester }) => {
         inherent_dampak: parseInt(formData.inherent_dampak) || 1,
         inherent_ir: parseFloat(formData.inherent_ir) || 0,
         level_risiko: formData.level_risiko,
+
+        // === TAMBAHKAN BARIS INI ===
+        terdapat_residual: String(formData.terdapat_residual) === 'true',
+        // ===========================
+
         residual_kemungkinan: String(formData.terdapat_residual) === 'false' ? 0 : parseInt(formData.residual_kemungkinan) || 1,
         residual_dampak: String(formData.terdapat_residual) === 'false' ? 0 : parseInt(formData.residual_dampak) || 1,
         rr: String(formData.terdapat_residual) === 'false' ? 0 : parseFloat(formData.rr) || 0,
