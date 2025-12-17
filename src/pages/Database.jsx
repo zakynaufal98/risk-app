@@ -261,6 +261,7 @@ const Database = ({ semester }) => {
     const progressInt = parseInt(editData.progress) || 0;
 
     const historyPayload = {
+      tanggal_identifikasi: editData.tanggal_identifikasi,
       ancaman: editData.ancaman,
       kerawanan: editData.kerawanan,
       dampak_identifikasi: editData.dampak_identifikasi,
