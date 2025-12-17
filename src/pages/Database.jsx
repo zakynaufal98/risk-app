@@ -21,10 +21,9 @@ const Database = ({ semester }) => {
   const [viewData, setViewData] = useState(null);
   const [editData, setEditData] = useState(null);
 
-  // --- STATE MODAL COPY (UPDATED) ---
+  // --- STATE MODAL COPY ---
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [sourceSemesterInput, setSourceSemesterInput] = useState('');
-  // State untuk tanggal custom (Default hari ini: YYYY-MM-DD)
   const [targetDateInput, setTargetDateInput] = useState(new Date().toISOString().split('T')[0]);
 
   // Toast & Confirm Delete
@@ -72,19 +71,14 @@ const Database = ({ semester }) => {
     }
   };
 
-  // --- 2. LOGIKA COPY DATA (UPDATED DATE) ---
-
-  // A. Fungsi Pembuka Modal
+  // --- 2. LOGIKA COPY DATA ---
   const handleCopyData = () => {
     setSourceSemesterInput(''); 
-    // Reset tanggal ke hari ini setiap kali modal dibuka
     setTargetDateInput(new Date().toISOString().split('T')[0]);
     setShowCopyModal(true);
   };
 
-  // B. Fungsi Eksekusi
   const executeCopy = async () => {
-    // Validasi
     if (!sourceSemesterInput.trim()) {
       alert("Nama semester sumber tidak boleh kosong.");
       return;
@@ -102,11 +96,9 @@ const Database = ({ semester }) => {
     setLoading(true);
 
     try {
-      // Cek User
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User tidak terdeteksi. Silakan login ulang.");
 
-      // Ambil data
       const { data: oldData, error: fetchError } = await supabase
         .from('risk_history')
         .select('*')
@@ -120,7 +112,6 @@ const Database = ({ semester }) => {
         return;
       }
 
-      // Transformasi Data
       const newRows = oldData.map(item => ({
         risk_no: item.risk_no,
         ancaman: item.ancaman,
@@ -128,17 +119,14 @@ const Database = ({ semester }) => {
         dampak_identifikasi: item.dampak_identifikasi,
         area_dampak: item.area_dampak,
         kontrol_saat_ini: item.kontrol_saat_ini,
-
         inherent_kemungkinan: item.inherent_kemungkinan,
         inherent_dampak: item.inherent_dampak,
         inherent_ir: item.inherent_ir,
         level_risiko: item.level_risiko,
-
         terdapat_residual: item.terdapat_residual,
         residual_kemungkinan: item.residual_kemungkinan,
         residual_dampak: item.residual_dampak,
         rr: item.rr,
-
         keputusan_penanganan: item.keputusan_penanganan,
         prioritas_risiko: item.prioritas_risiko,
         opsi_penanganan: item.opsi_penanganan,
@@ -148,11 +136,9 @@ const Database = ({ semester }) => {
         rencana_kontrol_tambahan: item.rencana_kontrol_tambahan,
         risk_owner: item.risk_owner,
 
-        // === BAGIAN UTAMA YANG DIUBAH ===
+        // Reset/Update Values
         semester: semester,
-        // Gunakan tanggal dari Input User
-        tanggal_identifikasi: targetDateInput, 
-        
+        tanggal_identifikasi: targetDateInput,
         user_id: user.id,
         progress: 0,
         status: 'Open',
@@ -165,7 +151,7 @@ const Database = ({ semester }) => {
 
       if (insertError) throw insertError;
 
-      showToast(`Berhasil menyalin ${newRows.length} data dengan tanggal ${targetDateInput}!`, 'success');
+      showToast(`Berhasil menyalin ${newRows.length} data!`, 'success');
       fetchRisks();
 
     } catch (err) {
@@ -232,14 +218,12 @@ const Database = ({ semester }) => {
         }
         
         const next = { ...prev, [name]: parsedVal };
-        // Recalculate IR
         if (name.includes('inherent')) {
             const ik = name === 'inherent_kemungkinan' ? Number(parsedVal) : Number(prev.inherent_kemungkinan);
             const id = name === 'inherent_dampak' ? Number(parsedVal) : Number(prev.inherent_dampak);
             next.inherent_ir = calculateRiskScore(ik, id);
             next.level_risiko = getRiskLevel(next.inherent_ir);
         }
-        // Recalculate RR
         if (name.includes('residual')) {
              if (String(prev.terdapat_residual) === 'true' || prev.terdapat_residual === true) {
                  const rk = name === 'residual_kemungkinan' ? Number(parsedVal) : Number(prev.residual_kemungkinan);
@@ -255,7 +239,6 @@ const Database = ({ semester }) => {
     e.preventDefault();
     if (!editData) return;
     
-    // Recalculate Final Scores before submit
     const newIR = calculateRiskScore(editData.inherent_kemungkinan, editData.inherent_dampak);
     const newLevel = getRiskLevel(newIR);
     const isRes = String(editData.terdapat_residual) === 'true' || editData.terdapat_residual === true;
@@ -339,15 +322,207 @@ const Database = ({ semester }) => {
   };
   const displayStatusForRow = (row) => row.status || getStatusFromProgress(row.progress);
 
-  // --- EXPORT EXCEL ---
+  // --- EXPORT EXCEL (KODE LENGKAP DIPULIHKAN) ---
+  // --- EXPORT EXCEL DENGAN WARNA ---
   const exportToExcel = async () => {
-     try {
-       const wb = new ExcelJS.Workbook();
-       const ws = wb.addWorksheet('Register Risiko');
-       // ... KODE EXCEL SAMA SEPERTI SEBELUMNYA ...
-       const buf = await wb.xlsx.writeBuffer();
-       saveAs(new Blob([buf]), `Register Risiko ${semester}.xlsx`);
-     } catch(e) { alert('Gagal export excel'); }
+    try {
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Register Risiko');
+
+      // 1. JUDUL & HEADER (SAMA SEPERTI SEBELUMNYA)
+      ws.mergeCells('C3:U3');
+      ws.getCell('C3').value = 'REGISTER RISIKO KEAMANAN INFORMASI (ASET: PERANGKAT LUNAK)';
+      ws.getCell('C3').alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getCell('C3').font = { bold: true, size: 14 };
+
+      // Header Baris 4
+      ws.mergeCells('C4:H4'); ws.getCell('C4').value = 'Identifikasi Risiko';
+      ws.mergeCells('A4:A5'); ws.getCell('A4').value = 'Risk No';
+      ws.mergeCells('B4:B5'); ws.getCell('B4').value = 'Jenis Risiko';
+      ws.mergeCells('I4:I5'); ws.getCell('I4').value = 'Kontrol Saat Ini';
+      ws.mergeCells('U4:U5'); ws.getCell('U4').value = 'Apakah Terdapat Residual Risk';
+      ws.mergeCells('Y4:Y5'); ws.getCell('Y4').value = 'Status';
+      ws.mergeCells('Z4:Z5'); ws.getCell('Z4').value = 'Rencana Kontrol Tambahan';
+      ws.mergeCells('AA4:AA5'); ws.getCell('AA4').value = 'Risk Owner';
+
+      ws.mergeCells('J4:M4'); ws.getCell('J4').value = 'Nilai Resiko Bawaan (Inherent Risk)';
+      ws.mergeCells('N4:O4'); ws.getCell('N4').value = 'Evaluasi Risiko';
+      ws.mergeCells('P4:T4'); ws.getCell('P4').value = 'Rencana Penanganan Risiko';
+      ws.mergeCells('V4:X4'); ws.getCell('V4').value = 'Residual Risk';
+
+      // Header Baris 5
+      ws.getCell('C5').value = 'Aset';
+      ws.getCell('D5').value = 'Ancaman';
+      ws.getCell('E5').value = 'Kerawanan/Kelemahan';
+      ws.getCell('F5').value = 'Kategori';
+      ws.getCell('G5').value = 'Dampak';
+      ws.getCell('H5').value = 'Area Dampak';
+
+      ws.getCell('J5').value = 'Dampak';
+      ws.getCell('K5').value = 'Kemungkinan';
+      ws.getCell('L5').value = 'IR';
+      ws.getCell('M5').value = 'Level Risiko';
+
+      ws.getCell('N5').value = 'Keputusan Penanganan Risiko';
+      ws.getCell('O5').value = 'Prioritas Risiko';
+
+      ws.getCell('P5').value = 'Opsi Penanganan';
+      ws.getCell('Q5').value = 'Rencana Aksi Penanganan Risiko';
+      ws.getCell('R5').value = 'Keluaran';
+      ws.getCell('S5').value = 'Target/Jadwal Implementasi';
+      ws.getCell('T5').value = 'Penanggung Jawab';
+
+      ws.getCell('V5').value = 'Dampak';
+      ws.getCell('W5').value = 'Kemungkinan';
+      ws.getCell('X5').value = 'RR';
+
+      // Styling Header (Biru)
+      const headerCells = [
+        'A4','A5','B4','B5','C4','C5','D5','E5','F5','G5','H5',
+        'I4','I5','J4','J5','K5','L5','M5','N4','N5','O5',
+        'P4','P5','Q5','R5','S5','T5','U4','U5',
+        'V4','V5','W5','X5','Y4','Y5','Z4','Z5','AA4','AA5'
+      ];
+
+      headerCells.forEach(addr => {
+        const cell = ws.getCell(addr);
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B5394' } };
+        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+      });
+
+      // Warna khusus Header Group
+      ws.getCell('C4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC00000' } }; // Merah Identifikasi
+      ws.getCell('P4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00B050' } }; // Hijau Penanganan
+
+      // Lebar Kolom
+      ws.columns = [
+        { key: 'risk_no', width: 10 }, { key: 'jenis', width: 12 },
+        { key: 'aset', width: 25 }, { key: 'ancaman', width: 22 },
+        { key: 'kerawanan', width: 26 }, { key: 'kategori', width: 20 },
+        { key: 'dampak', width: 22 }, { key: 'area', width: 18 },
+        { key: 'kontrol', width: 22 }, 
+        
+        // Inherent Columns (J, K, L, M)
+        { key: 'idampak', width: 10 }, { key: 'ikem', width: 14 }, { key: 'ir', width: 8 }, { key: 'ilevel', width: 15 }, 
+        
+        { key: 'keputusan', width: 18 }, { key: 'prio', width: 10 }, 
+        { key: 'opsi', width: 16 }, { key: 'rencana', width: 26 }, 
+        { key: 'keluaran', width: 18 }, { key: 'target', width: 18 }, 
+        { key: 'pic', width: 16 }, { key: 'adaRes', width: 16 }, 
+        
+        // Residual Columns (V, W, X)
+        { key: 'rdampak', width: 10 }, { key: 'rkem', width: 14 }, { key: 'rr', width: 8 }, 
+        
+        { key: 'status', width: 14 }, { key: 'rkontrol', width: 20 }, { key: 'owner', width: 16 }
+      ];
+
+      // --- HELPER UNTUK KONVERSI WARNA ---
+      const applyRiskColor = (rowObj, level, columnsToColor) => {
+        // Ambil style (background & text color) dari helper yang sudah ada
+        const style = getBadgeStyle(level);
+        
+        // Konversi Hex (#ffffff) ke ARGB (FFffffff) untuk ExcelJS
+        const bgArgb = 'FF' + style.backgroundColor.replace('#', '');
+        const textArgb = 'FF' + style.color.replace('#', '');
+
+        columnsToColor.forEach(colKey => {
+          const cell = rowObj.getCell(colKey);
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: bgArgb }
+          };
+          cell.font = {
+            color: { argb: textArgb },
+            bold: true
+          };
+          cell.alignment = { horizontal: 'center', vertical: 'top', wrapText: true };
+        });
+      };
+
+      // 4. ISI DATA
+      risks.forEach(row => {
+        const master = row.risk_master || {};
+        
+        // Tambahkan baris data
+        const newRow = ws.addRow({
+          risk_no: row.risk_no,
+          jenis: master.jenis_risiko || row.jenis_risiko,
+          aset: master.aset,
+          ancaman: row.ancaman,
+          kerawanan: row.kerawanan,
+          kategori: master.kategori,
+          dampak: row.dampak_identifikasi,
+          area: row.area_dampak,
+          kontrol: row.kontrol_saat_ini,
+          
+          // INHERENT
+          idampak: row.inherent_dampak,
+          ikem: row.inherent_kemungkinan,
+          ir: row.inherent_ir,
+          ilevel: row.level_risiko,
+          
+          keputusan: row.keputusan_penanganan,
+          prio: row.prioritas_risiko,
+          opsi: row.opsi_penanganan,
+          rencana: row.rencana_aksi,
+          keluaran: row.keluaran,
+          target: row.target_jadwal,
+          pic: row.penanggung_jawab,
+          adaRes: String(row.terdapat_residual) === 'false' ? 'Tidak' : 'Ya',
+          
+          // RESIDUAL
+          rdampak: row.residual_dampak,
+          rkem: row.residual_kemungkinan,
+          rr: row.rr,
+          
+          status: row.status,
+          rkontrol: row.rencana_kontrol_tambahan,
+          owner: row.risk_owner,
+        });
+
+        // === LOGIKA PEWARNAAN OTOMATIS ===
+        
+        // 1. Warnai Kolom Inherent (Dampak, Kemungkinan, IR, Level)
+        // Warna berdasarkan Level Inherent
+        applyRiskColor(newRow, row.level_risiko, ['idampak', 'ikem', 'ir', 'ilevel']);
+
+        // 2. Warnai Kolom Residual (Dampak, Kemungkinan, RR)
+        // Hitung level residual dulu karena di DB mungkin hanya angka
+        if (String(row.terdapat_residual) === 'true' && row.rr !== null) {
+           const resLevel = getRiskLevel(Number(row.rr)); // Pakai helper yang sudah ada
+           applyRiskColor(newRow, resLevel, ['rdampak', 'rkem', 'rr']);
+        }
+      });
+
+      // Border Data untuk semua sel
+      const startRow = 6;
+      const lastRow = ws.lastRow.number;
+      if (lastRow >= startRow) {
+          for (let r = startRow; r <= lastRow; r++) {
+            ws.getRow(r).eachCell(cell => {
+              // Pertahankan fill color jika sudah ada (dari logika pewarnaan di atas)
+              const existingFill = cell.fill;
+              const existingFont = cell.font;
+              
+              cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
+              cell.alignment = cell.alignment || { vertical: 'top', wrapText: true }; // Keep existing alignment if set
+              
+              if(existingFill) cell.fill = existingFill;
+              if(existingFont) cell.font = existingFont;
+            });
+          }
+      }
+
+      // 5. DOWNLOAD
+      const buf = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buf]), `Register Risiko ${semester}.xlsx`);
+    } catch (err) {
+      console.error('Export Excel error:', err);
+      alert('Gagal membuat file Excel.');
+    }
   };
 
   // ============================================
