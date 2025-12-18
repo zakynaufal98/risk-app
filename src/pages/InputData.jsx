@@ -516,13 +516,14 @@ const InputData = ({ semester }) => {
                     <h1 className="fw-bold m-0 text-dark display-4">
                       {String(formData.terdapat_residual) === 'false' ? 0 : formData.rr}
                     </h1>
+                    {/* KODE BARU (MENAMPILKAN LEVEL RISIKO) */}
                     {String(formData.terdapat_residual) === 'true' && (
-                       <span 
-                         className="badge rounded-pill px-3 mt-2"
-                         style={getBadgeStyle(getRiskLevel(formData.rr))}
-                       >
-                         Lihat Matriks <i className="bi bi-grid-3x3 ms-1"></i>
-                       </span>
+                      <span 
+                        className="badge rounded-pill px-3 mt-2"
+                        style={getBadgeStyle(getRiskLevel(formData.rr))}
+                      >
+                        {getRiskLevel(formData.rr).toUpperCase()} <i className="bi bi-grid-3x3 ms-1"></i>
+                      </span>
                     )}
                   </div>
                 </div>
@@ -574,4 +575,4 @@ const InputData = ({ semester }) => {
   );
 };
 
-export default InputData;
+export default InputData; 
